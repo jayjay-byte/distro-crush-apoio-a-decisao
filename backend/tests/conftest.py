@@ -1,9 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.db import get_db, make_engine
-from app.main import app
+from app.main import app, fetch_distros
 from scripts.seed import seed
 
 
@@ -14,6 +14,13 @@ def engine(tmp_path_factory):
     seed(engine)
     yield engine
     engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def distros(engine):
+    """Distros do banco de teste, na forma que o motor de decisão recebe."""
+    with Session(engine) as db:
+        return fetch_distros(db)
 
 
 @pytest.fixture(scope="session")
