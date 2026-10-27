@@ -20,11 +20,10 @@ app.add_middleware(
 )
 
 
-def _distro_out(distro: Distro) -> DistroOut:
-    return DistroOut.model_validate({
-        **{c.key: getattr(distro, c.key) for c in Distro.__table__.columns},
-        "grupo_nome": distro.grupo_rel.nome,
-    })
+def fetch_distros(db: Session) -> list[DistroOut]:
+    """Todas as distros, em ordem alfabética (entrada do motor de decisão)."""
+    distros = db.scalars(select(Distro).options(joinedload(Distro.grupo_rel))).all()
+    return [DistroOut.from_model(d) for d in sorted(distros, key=lambda d: d.nome.casefold())]
 
 
 def _distinct(values: list[str | None]) -> list[str]:
@@ -39,8 +38,7 @@ def health() -> dict[str, str]:
 
 @app.get("/distros", response_model=list[DistroOut])
 def list_distros(db: Session = Depends(get_db)) -> list[DistroOut]:
-    distros = db.scalars(select(Distro).options(joinedload(Distro.grupo_rel))).all()
-    return [_distro_out(d) for d in sorted(distros, key=lambda d: d.nome.casefold())]
+    return fetch_distros(db)
 
 
 @app.get("/distros/{distro_id}", response_model=DistroOut)
@@ -48,7 +46,7 @@ def get_distro(distro_id: str, db: Session = Depends(get_db)) -> DistroOut:
     distro = db.get(Distro, distro_id, options=[joinedload(Distro.grupo_rel)])
     if distro is None:
         raise HTTPException(status_code=404, detail="Distro não encontrada")
-    return _distro_out(distro)
+    return DistroOut.from_model(distro)
 
 
 @app.get("/criterios", response_model=list[CriterioOut])

@@ -180,6 +180,7 @@ A ordem de importância segue a Figura 2-1 do livro. Fórmula: `w_k = (1/n) × �
 - **Distro isolada** (única compatível do seu grupo):
   - IA **maior** que o do 1º grupo: vai para **"Destaque fora dos grupos"**, acima dos grupos;
   - caso contrário: vai para **"Também compatíveis"**, abaixo dos grupos.
+  - nenhum grupo exibido: todas as isoladas vão para **"Destaque fora dos grupos"**, junto com o aviso de restrições abaixo.
 - Menos de 3 grupos exibidos (mínimo da faixa 3–7 do agrupamento): exibir o aviso *"Suas restrições de hardware/ambiente limitaram as opções."* Ex.: P7 (2 grupos) exibe o aviso; P6 (3 grupos) não.
 - O agrupamento deve ser recalculado sempre que a base mudar (inclusão ou remoção de distros, dados alterados).
 
@@ -214,12 +215,20 @@ Texto de apoio: *"Quanto a distro atende às suas respostas, não é chance de s
 | **Detalhamento da distro** | IA exato, grupo, tabela peso × nota × contribuição (6 critérios), "onde perdeu pontos" em linguagem simples, informações técnicas (pacotes, init, modelo) |
 | **Relatórios** | Histórico/comparação de simulações com grupos nomeados e IA |
 
-**Avisos por distro**, vindos da coluna `aviso` e de `req_tipo_*`:
+**Onde perdeu pontos:** lista os critérios respondidos com nota < 1, na ordem de importância, no formato "Critério (valor da distro)", para todos os critérios:
 
-- requisito não informado pelo projeto;
-- valor apenas recomendado;
-- sistema live (Tails);
-- hardware restrito (SteamOS).
+- Propósito: "Propósito (geral)" ou "Propósito (tarefa jogos)";
+- Usabilidade: "Usabilidade (nota 2)", com o valor de `amigabilidade`;
+- Suporte: "Suporte (fórum: não)", "Suporte (pago: parcial)". Com as duas opções marcadas, as que perderam pontos aparecem juntas: "Suporte (fórum: não; pago: parcial)";
+- Estabilidade: "Estabilidade (rolling)";
+- Init: "Init (OpenRC)";
+- Ambiente gráfico: "Ambiente gráfico (padrão GNOME)"; quando a ficha não define padrão ("nenhum (escolha livre)"): "Ambiente gráfico (sem padrão, escolha livre)".
+
+**Avisos por distro**, com acentuação correta e sem duplicatas:
+
+- requisito não informado pelo projeto: gerado quando `ram_min_gb` ou `disco_min_gb` está ausente ("RAM: requisito não informado pelo projeto", "Armazenamento: requisito não informado pelo projeto");
+- valor apenas recomendado: gerado quando `req_tipo_ram` ou `req_tipo_disco` = `recomendado` ("RAM: valor apenas recomendado", "Armazenamento: valor apenas recomendado");
+- sistema live (Tails) e hardware restrito (SteamOS): vêm da coluna `aviso`. Da coluna, entram só os trechos que não são de requisito, porque esses já são gerados pelos campos acima.
 
 ---
 
