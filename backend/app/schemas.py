@@ -1,5 +1,6 @@
 """Schemas Pydantic de entrada e saída da API."""
 
+from datetime import datetime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
@@ -136,3 +137,134 @@ class Resultado(BaseModel):
     grupos: list[GrupoResultado]
     tambem_compativeis: list[DistroResultado]
     avisos: list[str]
+
+
+# --- Autenticação ----------------------------------------------------------
+
+class LoginIn(BaseModel):
+    login: str
+    senha: str
+
+
+class UsuarioOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    login: str
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: Literal["bearer"] = "bearer"
+    expira_em: datetime
+    usuario: UsuarioOut
+
+
+# --- Simulações ------------------------------------------------------------
+# Datas sempre em UTC; o Pydantic serializa em ISO 8601 com "Z".
+
+class GrupoResumo(BaseModel):
+    nome: str
+    ia: float
+    rotulo: str
+
+
+class DistroResumo(BaseModel):
+    id: str
+    nome: str
+    ia: float
+    rotulo: str
+
+
+class SimulacaoResumo(BaseModel):
+    """Linha da listagem de simulações salvas."""
+
+    id: int
+    data: datetime
+    perfil: str  # ex.: "Iniciante · Uso geral · Desktop"
+    proposito: str  # "geral" ou o valor de `tarefa`
+    primeiro_grupo: GrupoResumo | None
+    distro_maior_ia: DistroResumo | None
+
+
+class SimulacaoPagina(BaseModel):
+    itens: list[SimulacaoResumo]
+    total: int
+    pagina: int
+    por_pagina: int
+    total_paginas: int
+
+
+class SimulacaoDetalhe(BaseModel):
+    id: int
+    data: datetime
+    perfil: str
+    respostas: Respostas
+    resultado: Resultado  # snapshot salvo, sem recalcular
+
+
+class GrupoRanking(BaseModel):
+    posicao: int
+    nome: str
+    ia: float
+    rotulo: str
+    distros: int  # quantidade de compatíveis no grupo
+
+
+class RankingGrupos(BaseModel):
+    primeiro_grupo: GrupoRanking | None
+    grupos: list[GrupoRanking]
+
+
+class SensibilidadeOut(BaseModel):
+    """Ranking de grupos com pesos ROC e com pesos iguais, recalculados com a base atual."""
+
+    simulacao_id: int
+    roc: RankingGrupos
+    iguais: RankingGrupos
+    mesmo_primeiro_grupo: bool
+
+
+# --- Dashboard -------------------------------------------------------------
+
+class DistroContagem(BaseModel):
+    id: str
+    nome: str
+    vezes: int  # vezes como distro de maior IA
+
+
+class PropositoContagem(BaseModel):
+    proposito: str
+    rotulo: str
+    total: int
+
+
+class PontoIA(BaseModel):
+    simulacao_id: int
+    data: datetime
+    ia: float
+    rotulo: str
+    grupo: str
+
+
+class PrimeiroGrupoDetalhe(GrupoResumo):
+    distros: list[DistroResumo]
+
+
+class UltimaSimulacao(BaseModel):
+    id: int
+    data: datetime
+    perfil: str
+    ram_gb: float
+    primeiro_grupo: PrimeiroGrupoDetalhe | None
+    distro_maior_ia: DistroResumo | None
+
+
+class DashboardOut(BaseModel):
+    total_simulacoes: int
+    simulacoes_mes_atual: int
+    ultima_simulacao_em: datetime | None
+    distros_mais_recomendadas: list[DistroContagem]
+    simulacoes_por_proposito: list[PropositoContagem]
+    ia_primeiro_grupo_por_simulacao: list[PontoIA]  # da mais antiga para a mais recente
+    ultima_simulacao: UltimaSimulacao | None
