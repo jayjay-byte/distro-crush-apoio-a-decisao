@@ -230,6 +230,22 @@ Texto de apoio: *"Quanto a distro atende às suas respostas, não é chance de s
 - valor apenas recomendado: gerado quando `req_tipo_ram` ou `req_tipo_disco` = `recomendado` ("RAM: valor apenas recomendado", "Armazenamento: valor apenas recomendado");
 - sistema live (Tails) e hardware restrito (SteamOS): vêm da coluna `aviso`. Da coluna, entram só os trechos que não são de requisito, porque esses já são gerados pelos campos acima.
 
+### 7.1 Dados das telas (API do piloto)
+
+- **Acesso:** login simples com usuário e senha (hash bcrypt) e token com validade de 8 horas. Cada usuário vê **só as próprias simulações**; a simulação de outro usuário é tratada como inexistente. Usuários de demonstração: `demo` e `demo2`.
+- **Atualizar recomendação** (what-if) calcula sem salvar e não entra em nenhuma contagem. **Salvar** grava as respostas e o resultado completo (snapshot), para que o Relatório e o Detalhamento de simulações antigas não sejam recalculados.
+- **Perfil resumido** de uma simulação: "Nível · Propósito · Ambiente", ex.: "Iniciante · Uso geral · Desktop".
+- **Distro de maior IA** de uma simulação: a 1ª colocada geral do ranking, esteja ela num grupo, nos destaques ou em "também compatíveis".
+- **Dashboard** (sumarização, só simulações do usuário logado; os filtros ficam só no visual):
+  - total de simulações salvas, quantas no mês atual e a data da última;
+  - IA do 1º grupo da última simulação;
+  - distros mais recomendadas: quantas vezes cada distro foi a de maior IA;
+  - simulações por propósito: Uso geral, Jogos, Segurança e Hardware antigo, mesmo com zero;
+  - linha com o IA do 1º grupo de cada simulação, da mais antiga para a mais recente;
+  - resumo da última simulação: data, perfil, RAM, 1º grupo com suas distros e IA, distro de maior IA.
+- **Relatórios:** listagem paginada, da mais recente para a mais antiga. A **sensibilidade** (ROC × pesos iguais) é recalculada com as respostas salvas e a base atual, nos dois lados, para comparar nas mesmas condições.
+- Datas gravadas em UTC e trocadas com o front-end em ISO 8601.
+
 ---
 
 ## 8. Validação: personas
