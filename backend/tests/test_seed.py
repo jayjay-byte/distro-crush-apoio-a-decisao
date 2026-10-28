@@ -68,4 +68,4 @@ def test_seed_pode_rodar_varias_vezes(tmp_path):
     seed(engine)
     resumo = seed(engine)
     engine.dispose()
-    assert resumo == {"distros": 34, "grupos": 7, "criterios": 6, "usuarios": 1}
+    assert resumo == {"distros": 34, "grupos": 7, "criterios": 6, "usuarios": 2}

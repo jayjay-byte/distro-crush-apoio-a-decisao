@@ -46,6 +46,7 @@ COLUNAS_CRITERIOS = [
 COLUNAS_FICHA = ["id", "no_livro", "familia"]
 
 DEMO_LOGIN = "demo"
+DEMO2_LOGIN = "demo2"  # segundo usuário, para testar o isolamento das simulações
 DEMO_SENHA = "demo123"
 
 
@@ -122,8 +123,10 @@ def seed(engine: Engine, xlsx_path: Path = XLSX_PATH) -> dict[str, int]:
             Criterion(id=cid, nome=nome, ordem=ordem, peso=peso)
             for ordem, ((cid, nome), peso) in enumerate(zip(CRITERIOS, pesos), start=1)
         )
-        senha_hash = bcrypt.hashpw(DEMO_SENHA.encode(), bcrypt.gensalt()).decode()
-        db.add(User(login=DEMO_LOGIN, senha_hash=senha_hash))
+        db.add_all(
+            User(login=login, senha_hash=bcrypt.hashpw(DEMO_SENHA.encode(), bcrypt.gensalt()).decode())
+            for login in (DEMO_LOGIN, DEMO2_LOGIN)
+        )
         db.commit()
 
         return {
