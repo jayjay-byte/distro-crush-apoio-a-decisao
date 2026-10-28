@@ -4,12 +4,31 @@ Os campos com vários valores (ex.: `desktop|servidor`) ficam como na ficha,
 com o separador `|`; o split é feito na leitura (ver `schemas.split_multi`).
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text, TypeDecorator
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
+
+
+class UTCDateTime(TypeDecorator):
+    """Data em UTC. O SQLite não guarda fuso: grava sem fuso e devolve com `tzinfo=UTC`."""
+
+    impl = DateTime
+    cache_ok = True
+
+    def process_bind_param(self, value: datetime | None, dialect) -> datetime | None:
+        if value is not None and value.tzinfo is not None:
+            value = value.astimezone(UTC).replace(tzinfo=None)
+        return value
+
+    def process_result_value(self, value: datetime | None, dialect) -> datetime | None:
+        return None if value is None else value.replace(tzinfo=UTC)
+
+
+def _agora() -> datetime:
+    return datetime.now(UTC)
 
 
 class Group(Base):
@@ -69,7 +88,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     login: Mapped[str] = mapped_column(String, unique=True)
     senha_hash: Mapped[str] = mapped_column(String)
-    criado_em: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    criado_em: Mapped[datetime] = mapped_column(UTCDateTime, default=_agora)
 
     simulacoes: Mapped[list["Simulation"]] = relationship(back_populates="usuario")
 
@@ -80,7 +99,7 @@ class Simulation(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"))
     respostas: Mapped[dict] = mapped_column(JSON)
-    criado_em: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    criado_em: Mapped[datetime] = mapped_column(UTCDateTime, default=_agora)
 
     usuario: Mapped[User] = relationship(back_populates="simulacoes")
     resultado: Mapped["Result | None"] = relationship(back_populates="simulacao")
@@ -92,6 +111,6 @@ class Result(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     simulacao_id: Mapped[int] = mapped_column(ForeignKey("simulacoes.id"), unique=True)
     dados: Mapped[dict] = mapped_column(JSON)  # snapshot completo do resultado
-    criado_em: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    criado_em: Mapped[datetime] = mapped_column(UTCDateTime, default=_agora)
 
     simulacao: Mapped[Simulation] = relationship(back_populates="resultado")
