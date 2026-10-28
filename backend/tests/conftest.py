@@ -38,3 +38,19 @@ def client(engine):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+
+
+def _login(client, login: str) -> str:
+    resp = client.post("/auth/login", json={"login": login, "senha": "demo123"})
+    assert resp.status_code == 200
+    return resp.json()["access_token"]
+
+
+@pytest.fixture(scope="session")
+def token_demo(client):
+    return _login(client, "demo")
+
+
+@pytest.fixture(scope="session")
+def token_demo2(client):
+    return _login(client, "demo2")
