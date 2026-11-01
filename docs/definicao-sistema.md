@@ -213,7 +213,7 @@ Texto de apoio: *"Quanto a distro atende às suas respostas, não é chance de s
 | **Módulo de simulação** | Formulário (seção 3) + botões "Atualizar recomendação" e "Salvar" |
 | **Resultado** | Destaque fora dos grupos (se houver) → grupos nomeados com IA do grupo → distros com IA → Também compatíveis (se houver) → avisos |
 | **Detalhamento da distro** | IA exato, grupo, tabela peso × nota × contribuição (6 critérios), "onde perdeu pontos" em linguagem simples, informações técnicas (pacotes, init, modelo) |
-| **Relatórios** | Histórico/comparação de simulações com grupos nomeados e IA |
+| **Relatórios** | Histórico/comparação de simulações com grupos nomeados e IA, análise de sensibilidade (ROC × pesos iguais) e "Como interpretar este resultado" |
 
 **Resultado e Detalhamento no protótipo:** os dois são seções da tela de Simulação, como no Figma, e não telas com rota própria.
 
@@ -264,11 +264,26 @@ Regras de exibição:
 - **Dashboard** (sumarização, só simulações do usuário logado; os filtros ficam só no visual):
   - total de simulações salvas, quantas no mês atual e a data da última;
   - IA do 1º grupo da última simulação;
-  - distros mais recomendadas: quantas vezes cada distro foi a de maior IA;
+  - distro mais recomendada (a 1ª do ranking abaixo). Esse card substitui o "Simulações salvas" do Figma, que repetiria o total;
+  - distros mais recomendadas: quantas vezes cada distro foi a de maior IA ("Quantas vezes cada distro foi a mais aderente às suas respostas"); o gráfico mostra as 5 primeiras;
   - simulações por propósito: Uso geral, Jogos, Segurança e Hardware antigo, mesmo com zero;
   - linha com o IA do 1º grupo de cada simulação, da mais antiga para a mais recente;
-  - resumo da última simulação: data, perfil, RAM, 1º grupo com suas distros e IA, distro de maior IA.
-- **Relatórios:** listagem paginada, da mais recente para a mais antiga. A **sensibilidade** (ROC × pesos iguais) é recalculada com as respostas salvas e a base atual, nos dois lados, para comparar nas mesmas condições.
+  - resumo da última simulação: data, perfil, RAM, 1º grupo com suas distros e IA, distro de maior IA, e o botão "Ver relatório", que abre a simulação em Relatórios.
+- **Relatórios:** listagem paginada, da mais recente para a mais antiga. A simulação escolhida fica na URL (`/relatorios?simulacao=ID`); sem escolha, abre a mais recente. O relatório mostra:
+  - as 10 respostas com os rótulos da tela;
+  - o ranking de grupos do snapshot salvo, com o mesmo resultado e detalhamento da Simulação;
+  - o comparativo do IA por grupo;
+  - a sensibilidade;
+  - "Como interpretar este resultado".
+- **Sensibilidade:** o ranking ROC × pesos iguais é recalculado com as respostas salvas e a base atual, nos dois lados, para comparar nas mesmas condições. Na tela:
+  - aviso no topo dizendo se o 1º grupo se manteve ou mudou;
+  - os dois rankings lado a lado (empilhados no celular), com posição, nome, nº de distros, IA e rótulo, e o 1º de cada lado em destaque;
+  - no lado de pesos iguais, quanto cada grupo subiu ou desceu em relação ao ROC.
+- **Como interpretar este resultado:** três textos-modelo, preenchidos com os dados da simulação, sem explicar "por que" um grupo foi favorecido:
+  1. **Perfil e facilidade:** com destaque fora dos grupos, cita primeiro a distro em destaque e o IA dela e depois o 1º grupo (mesma regra do título do resultado): "Destaque para o seu perfil: <distro>, com IA de 93% (Muito alta), fora dos grupos. O grupo mais aderente é <grupo>, com IA de 87% (Alta)." Sem destaque: "O 1º grupo é <grupo>, com IA de 92% (Muito alta)." Nos dois casos, termina com "A usabilidade foi avaliada para o nível <nível>.";
+  2. **Hardware e preferências:** "<RAM> GB de RAM, <disco> GB de armazenamento, <arquitetura> e ambiente <ambiente> deixaram N distros compatíveis na triagem. As preferências (ajuda, atualizações, init e ambiente gráfico) só alteram o IA." (com tarefa: "A tarefa <tarefa> também filtra as distros de propósito específico.");
+  3. **Limites da análise:** "O IA mostra quanto a distro atende às suas respostas, não é chance de sucesso. Verifique cada versão antes da instalação."
+- **Sem simulações salvas:** Dashboard e Relatórios mostram uma mensagem e o botão "Fazer uma simulação", sem gráficos vazios.
 - Datas gravadas em UTC e trocadas com o front-end em ISO 8601.
 
 ---
