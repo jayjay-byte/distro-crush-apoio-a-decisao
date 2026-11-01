@@ -1,4 +1,4 @@
-import { Bookmark, BookmarkCheck, CircleCheck, LoaderCircle, RefreshCw } from 'lucide-react'
+import { Bookmark, BookmarkCheck, CircleCheck, RefreshCw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { describeApiError } from '../api/client'
 import { recomendar, salvarSimulacao } from '../api/simulacao'
@@ -20,6 +20,7 @@ import {
 import { StepsProgress } from '../components/simulacao/StepsProgress'
 import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
+import { LoadingCard } from '../components/ui/LoadingCard'
 import { useOpcoes } from '../hooks/useOpcoes'
 import { formatDataHora } from '../utils/format'
 
@@ -217,10 +218,7 @@ export default function Simulacao() {
             </div>
           </>
         ) : analisando ? (
-          <div role="status" className="flex items-center justify-center gap-2 rounded-lg border border-line bg-card p-8 text-body text-fg-muted">
-            <LoaderCircle aria-hidden className="size-5 animate-spin text-accent" />
-            Calculando recomendação…
-          </div>
+          <LoadingCard>Calculando recomendação…</LoadingCard>
         ) : erroAnalise ? (
           <Alert variant="erro">{erroAnalise}</Alert>
         ) : (
