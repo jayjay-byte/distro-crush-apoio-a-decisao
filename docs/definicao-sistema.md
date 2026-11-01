@@ -215,6 +215,31 @@ Texto de apoio: *"Quanto a distro atende às suas respostas, não é chance de s
 | **Detalhamento da distro** | IA exato, grupo, tabela peso × nota × contribuição (6 critérios), "onde perdeu pontos" em linguagem simples, informações técnicas (pacotes, init, modelo) |
 | **Relatórios** | Histórico/comparação de simulações com grupos nomeados e IA |
 
+**Resultado e Detalhamento no protótipo:** os dois são seções da tela de Simulação, como no Figma, e não telas com rota própria.
+
+- O **Resultado** aparece abaixo do formulário depois de "Atualizar recomendação".
+- O **Detalhamento** é um painel expansível ("Ver detalhamento" / "Ocultar detalhamento") logo abaixo do card que contém a distro. Fica um aberto por vez.
+- Em Relatórios, os mesmos componentes exibem o snapshot salvo, sem recalcular.
+
+Regras de exibição:
+
+- **Título do resultado:**
+  - sem destaque: "Seu perfil combina mais com: <1º grupo>";
+  - com destaque: "Destaque para o seu perfil: <distro>" e, abaixo, "Grupo mais aderente: <1º grupo>".
+- **Salvar:**
+  - fica junto ao título do resultado e no fim dele;
+  - grava as respostas atuais;
+  - se alguma resposta mudou depois da última análise, aparece um aviso e Salvar fica desabilitado até a recomendação ser atualizada.
+- **Tabela do Detalhamento:**
+  - Critério | Peso | Nota | Contribuição (peso × nota) + Total (IA);
+  - a nota mostra estado + valor:
+    - atende (1);
+    - parcial (0 < nota < 1, ex.: "parcial · 0,75");
+    - não atende (0);
+    - não respondido, que não entra no cálculo.
+- **"Onde perdeu pontos":** mostra as frases no formato acima, como vêm da API.
+- **Informações técnicas** (pacotes, init, modelo de lançamento, desktops): vêm da ficha e não têm peso.
+
 **Onde perdeu pontos:** lista os critérios respondidos com nota < 1, na ordem de importância, no formato "Critério (valor da distro)", para todos os critérios:
 
 - Propósito: "Propósito (geral)" ou "Propósito (tarefa jogos)";
