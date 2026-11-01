@@ -40,9 +40,28 @@ export function formatGb(value: number): string {
   return decimalFormat(0, 2).format(value)
 }
 
+/** Percentual com 1 casa (fatia da rosca, calculada no front): (1, 6) → "16,7%". */
+export function formatFracao(parte: number, total: number): string {
+  return `${decimalFormat(1, 1).format(total > 0 ? (parte / total) * 100 : 0)}%`
+}
+
+function toDate(iso: string | Date): Date {
+  return typeof iso === 'string' ? new Date(iso) : iso
+}
+
+/** Data ISO 8601 → "29/06/2026" (fuso do navegador). */
+export function formatData(iso: string | Date): string {
+  return toDate(iso).toLocaleDateString(LOCALE)
+}
+
+/** Data ISO 8601 → "29/06" (eixo do gráfico de linha). */
+export function formatDiaMes(iso: string | Date): string {
+  return toDate(iso).toLocaleDateString(LOCALE, { day: '2-digit', month: '2-digit' })
+}
+
 /** Data ISO 8601 → "29/06/2026, às 14:32" (fuso do navegador). */
 export function formatDataHora(iso: string | Date): string {
-  const date = typeof iso === 'string' ? new Date(iso) : iso
+  const date = toDate(iso)
   const dia = date.toLocaleDateString(LOCALE)
   const hora = date.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })
   return `${dia}, às ${hora}`

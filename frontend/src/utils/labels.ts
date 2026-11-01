@@ -1,7 +1,8 @@
 // Rótulos da tela para os valores da API ("Correspondência entre tela e ficha" no CLAUDE.md).
-// Reaproveitados no formulário, no detalhamento e, na Fase 4c, em Relatórios.
+// Reaproveitados no formulário, no detalhamento e em Relatórios.
 
-import type { Ajuda, Ambiente, Arquitetura, Atualizacoes, CriterioId, Nivel, Tarefa } from '../api/types'
+import type { Ajuda, Ambiente, Arquitetura, Atualizacoes, CriterioId, Nivel, Respostas, Tarefa } from '../api/types'
+import { formatGb } from './format'
 
 export const SEM_PREFERENCIA = 'Sem preferência'
 
@@ -60,4 +61,25 @@ const MODELO_LABEL: Record<string, string> = {
 
 export function modeloLabel(valor: string): string {
   return MODELO_LABEL[valor.trim().toLowerCase()] ?? valor
+}
+
+/** "Fórum oficial", "Fórum oficial, Suporte pago" ou "Sem preferência". */
+export function ajudaLabel(ajuda: Ajuda[] | null): string {
+  return ajuda && ajuda.length > 0 ? ajuda.map((a) => AJUDA_LABEL[a]).join(', ') : SEM_PREFERENCIA
+}
+
+/** As 10 respostas com os rótulos da tela, na ordem do Figma de Relatórios (10:23441). */
+export function respostasLabels(r: Respostas): { label: string; valor: string }[] {
+  return [
+    { label: 'Propósito', valor: r.tarefa ? TAREFA_LABEL[r.tarefa] : USO_GERAL },
+    { label: 'Ambiente', valor: AMBIENTE_LABEL[r.ambiente] },
+    { label: 'Tipo de ajuda', valor: ajudaLabel(r.ajuda) },
+    { label: 'Usabilidade', valor: NIVEL_LABEL[r.nivel] },
+    { label: 'Memória RAM', valor: `${formatGb(r.ram_gb)} GB` },
+    { label: 'Armazenamento', valor: `${formatGb(r.disco_gb)} GB disponíveis` },
+    { label: 'Arquitetura', valor: ARQUITETURA_LABEL[r.arquitetura] },
+    { label: 'Estabilidade', valor: r.atualizacoes ? ATUALIZACOES_LABEL[r.atualizacoes] : SEM_PREFERENCIA },
+    { label: 'Ambiente gráfico', valor: r.desktop ?? SEM_PREFERENCIA },
+    { label: 'Sistema init', valor: r.init ?? SEM_PREFERENCIA },
+  ]
 }

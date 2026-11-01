@@ -35,6 +35,16 @@
   --c-danger: #b42318;
   --c-danger-soft: #fef3f2;
   --c-danger-border: #fecdca;
+  /* Gráficos (Recharts lê estes valores em hooks/useChartColors.ts).
+     Séries 1-4: tons do roxo do Figma, espaçados para passar na checagem de
+     daltonismo (dataviz/validate_palette.js); a identidade nunca depende só da cor. */
+  --c-chart-1: #5b21b6;
+  --c-chart-2: #8b5cf6;
+  --c-chart-3: #b49af8;
+  --c-chart-4: #ddd6fe;
+  --c-chart-grid: #e0e3eb;
+  --c-chart-axis: #8a90a0;
+  --c-chart-track: #f3f4f7;
 }
 
 .dark {
@@ -60,6 +70,13 @@
   --c-danger: #fda29b;
   --c-danger-soft: #2a1617;
   --c-danger-border: #7a2e2a;
+  --c-chart-1: #6d28d9;
+  --c-chart-2: #9b70f5;
+  --c-chart-3: #c2aefa;
+  --c-chart-4: #ede9fe;
+  --c-chart-grid: #34394e;
+  --c-chart-axis: #9197b0;
+  --c-chart-track: #151925;
 }
 
 @theme inline {
@@ -85,6 +102,13 @@
   --color-danger: var(--c-danger);
   --color-danger-soft: var(--c-danger-soft);
   --color-danger-border: var(--c-danger-border);
+  --color-chart-1: var(--c-chart-1);
+  --color-chart-2: var(--c-chart-2);
+  --color-chart-3: var(--c-chart-3);
+  --color-chart-4: var(--c-chart-4);
+  --color-chart-grid: var(--c-chart-grid);
+  --color-chart-axis: var(--c-chart-axis);
+  --color-chart-track: var(--c-chart-track);
 }
 
 @theme {
@@ -100,11 +124,6 @@
   --color-hero-glass: rgb(255 255 255 / 0.05);
   --color-hero-glass-border: rgb(255 255 255 / 0.15);
 
-  /* Séries dos gráficos (próximas fases) */
-  --color-chart-1: #9b70f5;
-  --color-chart-2: #b49af8;
-  --color-chart-3: #c2aefa;
-  --color-chart-4: #d0c2fc;
 
   /* Tipografia: Inter 400 / 600 / 800 */
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;

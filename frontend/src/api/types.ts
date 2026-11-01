@@ -124,3 +124,104 @@ export type OpcoesOut = {
   init: string[]
   desktops: string[]
 }
+
+// --- Relatórios e Dashboard (GET /simulacoes, /simulacoes/{id}/sensibilidade, /dashboard) ---
+
+export type GrupoResumo = {
+  nome: string
+  ia: number
+  rotulo: Rotulo
+}
+
+export type DistroResumo = {
+  id: string
+  nome: string
+  ia: number
+  rotulo: Rotulo
+}
+
+/** "geral" ou o valor de `tarefa`. */
+export type Proposito = 'geral' | Tarefa
+
+export type SimulacaoResumo = {
+  id: number
+  /** ISO 8601 em UTC (com Z). */
+  data: string
+  /** Ex.: "Iniciante · Uso geral · Desktop". */
+  perfil: string
+  proposito: Proposito
+  primeiro_grupo: GrupoResumo | null
+  distro_maior_ia: DistroResumo | null
+}
+
+export type SimulacaoPagina = {
+  itens: SimulacaoResumo[]
+  total: number
+  pagina: number
+  por_pagina: number
+  total_paginas: number
+}
+
+export type GrupoRanking = {
+  posicao: number
+  nome: string
+  ia: number
+  rotulo: Rotulo
+  /** Quantidade de compatíveis no grupo. */
+  distros: number
+}
+
+export type RankingGrupos = {
+  primeiro_grupo: GrupoRanking | null
+  grupos: GrupoRanking[]
+}
+
+export type SensibilidadeOut = {
+  simulacao_id: number
+  roc: RankingGrupos
+  iguais: RankingGrupos
+  mesmo_primeiro_grupo: boolean
+}
+
+export type DistroContagem = {
+  id: string
+  nome: string
+  /** Vezes como distro de maior IA. */
+  vezes: number
+}
+
+export type PropositoContagem = {
+  proposito: Proposito
+  rotulo: string
+  total: number
+}
+
+export type PontoIA = {
+  simulacao_id: number
+  data: string
+  ia: number
+  rotulo: Rotulo
+  grupo: string
+}
+
+export type UltimaSimulacao = {
+  id: number
+  data: string
+  perfil: string
+  ram_gb: number
+  primeiro_grupo: (GrupoResumo & { distros: DistroResumo[] }) | null
+  distro_maior_ia: DistroResumo | null
+}
+
+export type DashboardOut = {
+  total_simulacoes: number
+  simulacoes_mes_atual: number
+  ultima_simulacao_em: string | null
+  /** Decrescente por vezes, depois nome. */
+  distros_mais_recomendadas: DistroContagem[]
+  /** Sempre as 4 categorias, mesmo com 0. */
+  simulacoes_por_proposito: PropositoContagem[]
+  /** Da mais antiga para a mais recente. */
+  ia_primeiro_grupo_por_simulacao: PontoIA[]
+  ultima_simulacao: UltimaSimulacao | null
+}
