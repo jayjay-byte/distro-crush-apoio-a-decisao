@@ -15,6 +15,19 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Mensagem para o usuário a partir de um erro de `apiFetch`: falha de conexão,
+ * 422 (respostas recusadas pela validação) ou o `detail` da API; senão, `fallback`.
+ */
+export function describeApiError(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiError)) return fallback
+  if (error.message === NETWORK_ERROR_MESSAGE) return NETWORK_ERROR_MESSAGE
+  if (error.status === 422) return 'O servidor recusou algumas respostas. Revise o formulário e tente de novo.'
+  if (error.status === 401) return 'Sua sessão expirou. Entre novamente.'
+  // `detail` em texto vem da API em português; o genérico "Erro N" não ajuda o usuário.
+  return error.message.startsWith('Erro ') ? fallback : error.message
+}
+
 let unauthorizedHandler: (() => void) | null = null
 
 /** Chamado depois de limpar o token quando uma rota protegida responde 401. */

@@ -11,7 +11,7 @@ export type NavItem = {
 /** Lista única dos menus (barra lateral e menu mobile). "Sair" é uma ação à parte. */
 export const NAV_ITEMS: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, activeFor: ['/dashboard'] },
-  { to: '/simulacao', label: 'Simulação', icon: SlidersHorizontal, activeFor: ['/simulacao', '/resultado', '/distro'] },
+  { to: '/simulacao', label: 'Simulação', icon: SlidersHorizontal, activeFor: ['/simulacao'] },
   { to: '/relatorios', label: 'Relatórios', icon: ChartNoAxesCombined, activeFor: ['/relatorios'] },
 ]
 

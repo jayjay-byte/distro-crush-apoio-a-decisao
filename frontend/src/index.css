@@ -26,6 +26,11 @@
   --c-on-primary-soft: #4c1d95;
   --c-highlight: #f7f5ff;
   --c-hero-eyebrow: #c4b5fd;
+  /* Simulação (10:22744): chips, barras de IA, slider e 1º grupo */
+  --c-primary-soft-border: #c4b5fd;
+  --c-chip: #f3f4f7;
+  --c-chip-selected-fg: #4c1d95;
+  --c-bar: #6d28d9;
   /* Sem estado de erro no Figma: tons definidos para o piloto. */
   --c-danger: #b42318;
   --c-danger-soft: #fef3f2;
@@ -48,6 +53,10 @@
   --c-on-primary-soft: #a78bfa;
   --c-highlight: #32264e;
   --c-hero-eyebrow: #d0c2fc;
+  --c-primary-soft-border: #69518f;
+  --c-chip: #151925;
+  --c-chip-selected-fg: #d0c2fc;
+  --c-bar: #9b70f5;
   --c-danger: #fda29b;
   --c-danger-soft: #2a1617;
   --c-danger-border: #7a2e2a;
@@ -69,6 +78,10 @@
   --color-on-primary-soft: var(--c-on-primary-soft);
   --color-highlight: var(--c-highlight);
   --color-hero-eyebrow: var(--c-hero-eyebrow);
+  --color-primary-soft-border: var(--c-primary-soft-border);
+  --color-chip: var(--c-chip);
+  --color-chip-selected-fg: var(--c-chip-selected-fg);
+  --color-bar: var(--c-bar);
   --color-danger: var(--c-danger);
   --color-danger-soft: var(--c-danger-soft);
   --color-danger-border: var(--c-danger-border);
@@ -106,6 +119,10 @@
   --text-body--line-height: 1.45;
   --text-lead: 0.875rem; /* 14px */
   --text-lead--line-height: 1.45;
+  --text-subheading: 0.9375rem; /* 15px: títulos de painel e grupo */
+  --text-subheading--line-height: 1.45;
+  --text-ia: 1.0625rem; /* 17px: IA do grupo e do detalhamento */
+  --text-ia--line-height: 1.45;
   --text-heading: 1rem; /* 16px */
   --text-heading--line-height: 1.45;
   --text-title: 1.75rem; /* 28px */
