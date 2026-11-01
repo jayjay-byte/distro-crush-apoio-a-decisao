@@ -1,0 +1,164 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+
+/* Tema escuro pela classe .dark no <html> (ver src/theme/ThemeProvider.tsx). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Tokens de design extraídos do Figma (o arquivo não tem variáveis; valores
+ * tirados dos frames de Login e Dashboard, claro e escuro).
+ * Cores semânticas: um valor por tema; os componentes usam só as classes
+ * geradas pelo @theme (bg-surface, text-fg-muted, border-line...).
+ */
+:root {
+  --c-bg: #f3f4f7;
+  --c-surface: #ffffff;
+  --c-card: #ffffff;
+  --c-sunken: #ffffff;
+  --c-line: #e0e3eb;
+  --c-fg: #202330;
+  --c-fg-muted: #646b7b;
+  --c-fg-subtle: #8a90a0;
+  --c-primary: #6d28d9;
+  --c-primary-border: #6d28d9;
+  --c-accent: #6d28d9;
+  --c-primary-soft: #ede9fe;
+  --c-on-primary-soft: #4c1d95;
+  --c-highlight: #f7f5ff;
+  --c-hero-eyebrow: #c4b5fd;
+  /* Sem estado de erro no Figma: tons definidos para o piloto. */
+  --c-danger: #b42318;
+  --c-danger-soft: #fef3f2;
+  --c-danger-border: #fecdca;
+}
+
+.dark {
+  --c-bg: #11131d;
+  --c-surface: #171a26;
+  --c-card: #1c2030;
+  --c-sunken: #151925;
+  --c-line: #34394e;
+  --c-fg: #f3f2fa;
+  --c-fg-muted: #b5b9ce;
+  --c-fg-subtle: #9197b0;
+  --c-primary: #7c3aed;
+  --c-primary-border: #a78bfa;
+  --c-accent: #a78bfa;
+  --c-primary-soft: #32264e;
+  --c-on-primary-soft: #a78bfa;
+  --c-highlight: #32264e;
+  --c-hero-eyebrow: #d0c2fc;
+  --c-danger: #fda29b;
+  --c-danger-soft: #2a1617;
+  --c-danger-border: #7a2e2a;
+}
+
+@theme inline {
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-card: var(--c-card);
+  --color-sunken: var(--c-sunken);
+  --color-line: var(--c-line);
+  --color-fg: var(--c-fg);
+  --color-fg-muted: var(--c-fg-muted);
+  --color-fg-subtle: var(--c-fg-subtle);
+  --color-primary: var(--c-primary);
+  --color-primary-border: var(--c-primary-border);
+  --color-accent: var(--c-accent);
+  --color-primary-soft: var(--c-primary-soft);
+  --color-on-primary-soft: var(--c-on-primary-soft);
+  --color-highlight: var(--c-highlight);
+  --color-hero-eyebrow: var(--c-hero-eyebrow);
+  --color-danger: var(--c-danger);
+  --color-danger-soft: var(--c-danger-soft);
+  --color-danger-border: var(--c-danger-border);
+}
+
+@theme {
+  /* Cores fixas da marca (iguais nos dois temas) */
+  --color-on-primary: #ffffff;
+  --color-brand-hero: #4c1d95;
+  --color-brand-card: #c4b5fd;
+  --color-brand-card-border: #a78bfa;
+  --color-brand-ink: #2e1065;
+  --color-brand-accent: #7c3aed;
+  --color-hero-fg: #ffffff;
+  --color-hero-soft: #ede9fe;
+  --color-hero-glass: rgb(255 255 255 / 0.05);
+  --color-hero-glass-border: rgb(255 255 255 / 0.15);
+
+  /* Séries dos gráficos (próximas fases) */
+  --color-chart-1: #9b70f5;
+  --color-chart-2: #b49af8;
+  --color-chart-3: #c2aefa;
+  --color-chart-4: #d0c2fc;
+
+  /* Tipografia: Inter 400 / 600 / 800 */
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --text-caption: 0.625rem; /* 10px */
+  --text-caption--line-height: 1.45;
+  --text-small: 0.6875rem; /* 11px */
+  --text-small--line-height: 1.45;
+  --text-label: 0.75rem; /* 12px */
+  --text-label--line-height: 1.45;
+  --text-body: 0.8125rem; /* 13px */
+  --text-body--line-height: 1.45;
+  --text-lead: 0.875rem; /* 14px */
+  --text-lead--line-height: 1.45;
+  --text-heading: 1rem; /* 16px */
+  --text-heading--line-height: 1.45;
+  --text-title: 1.75rem; /* 28px */
+  --text-title--line-height: 1.2;
+  --text-title--letter-spacing: -0.015em;
+  --text-metric: 1.875rem; /* 30px */
+  --text-metric--line-height: 1.2;
+  --text-metric--letter-spacing: -0.015em;
+  --text-display: 2.625rem; /* 42px */
+  --text-display--line-height: 1.2;
+  --text-display--letter-spacing: -0.015em;
+  /* Palavra "DistroCrush" do logo (proporcional ao ícone) */
+  --text-logo-md: 17.26px;
+  --text-logo-md--line-height: normal;
+  --text-logo-md--letter-spacing: -0.32px;
+  --text-logo-lg: 24.34px;
+  --text-logo-lg--line-height: normal;
+  --text-logo-lg--letter-spacing: -0.32px;
+
+  /* Raios */
+  --radius-xs: 3px; /* caixa de seleção */
+  --radius-sm: 4px; /* barras */
+  --radius-md: 6px; /* controles, itens de navegação */
+  --radius-lg: 8px; /* cards, botão de tema */
+  --radius-logo-sm: 14px;
+  --radius-logo-md: 16px;
+  --radius-logo-lg: 20px;
+
+  /* Sombras */
+  --shadow-logo: 0 2px 4px rgb(46 16 101 / 0.2);
+
+  /* Medidas de layout (w-*, h-*, size-*) */
+  --spacing-sidebar: 216px;
+  --spacing-topbar: 68px;
+  --spacing-topbar-mobile: 64px;
+  --spacing-control: 42px;
+  --spacing-nav-item: 44px;
+  --spacing-nav-item-mobile: 54px;
+  --spacing-login-form: 400px;
+  --spacing-login-hero: 640px;
+  --spacing-icon-button: 32px;
+  --spacing-logo-sm: 32px;
+  --spacing-logo-md: 42px;
+  --spacing-logo-lg: 60px;
+}
+
+@layer base {
+  html {
+    @apply bg-bg font-sans text-fg antialiased;
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+}
