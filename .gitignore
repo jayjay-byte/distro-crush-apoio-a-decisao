@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+.pytest_cache/
 *.py[codz]
 *$py.class
 
@@ -218,3 +219,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Claude Code (arquivo local)
+CLAUDE.md
+
+# Banco gerado pelo seed
+backend/distro_crush.db
+
+# Ambientes e dependências
+.venv/
+node_modules/
+.env

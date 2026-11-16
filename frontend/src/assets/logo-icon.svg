@@ -1,0 +1,17 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Distro Crush &#194;&#183; Logo pequena" clip-path="url(#clip0_0_14)">
+<path id="Vector" d="M24.5 0H7.5C3.35786 0 0 3.35786 0 7.5V24.5C0 28.6421 3.35786 32 7.5 32H24.5C28.6421 32 32 28.6421 32 24.5V7.5C32 3.35786 28.6421 0 24.5 0Z" fill="url(#paint0_linear_0_14)"/>
+<path id="Vector_2" d="M16 26C5.80224 18.7879 6.31213 9 12.1758 9C13.9604 9 15.2352 10.0303 16 11.5758C16.7648 10.0303 18.0396 9 19.8242 9C25.6879 9 26.1978 18.7879 16 26Z" fill="white"/>
+<path id="Vector_3" d="M13 14L16 16.5L13 19" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke="#6D28D9"/>
+<path id="Vector_4" d="M17 20H20" stroke-width="1.5" stroke-linecap="round" stroke="#6D28D9"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_14" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+<stop stop-color="#8B5CF6"/>
+<stop offset="1" stop-color="#4C1D95"/>
+</linearGradient>
+<clipPath id="clip0_0_14">
+<rect width="32" height="32" fill="white"/>
+</clipPath>
+</defs>
+</svg>
