@@ -4,7 +4,7 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: 'distro-crush-apoio-a-decisao',
+  base: '/distro-crush-apoio-a-decisao/',
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
