@@ -1,6 +1,7 @@
 import { clearSession, getSession } from './token'
 
-// O Vite encaminha /api para http://localhost:8000 (vite.config.ts).
+// Em dev, o Vite encaminha /api para http://localhost:8000 (vite.config.ts).
+// Na Vercel, o vercel.json reescreve /api/* para o serviço backend, na mesma origem.
 const BASE_URL = '/api'
 
 export const NETWORK_ERROR_MESSAGE = 'Não foi possível conectar ao servidor.'
