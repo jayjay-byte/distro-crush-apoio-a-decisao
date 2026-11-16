@@ -23,7 +23,12 @@ from app.criteria import CRITERIOS, roc_weights  # noqa: E402
 from app.db import DB_PATH, Base, make_engine  # noqa: E402
 from app.models import Criterion, Distro, Group, User  # noqa: E402
 
-XLSX_PATH = BACKEND_DIR.parent / "dados" / "ficha_distros_atualizada.xlsx"
+_XLSX_NOME = "ficha_distros_atualizada.xlsx"
+# Na Vercel só a pasta backend/ é enviada; localmente continua usando dados/ na raiz.
+XLSX_PATH = next(
+    (p for p in (BACKEND_DIR / "dados" / _XLSX_NOME, BACKEND_DIR.parent / "dados" / _XLSX_NOME) if p.exists()),
+    BACKEND_DIR.parent / "dados" / _XLSX_NOME,
+)
 
 # Valor da coluna `grupo` (sem acento) -> nome de exibição.
 GRUPO_NOMES = {
