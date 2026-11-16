@@ -1,4 +1,4 @@
-import { Navigate, createBrowserRouter } from 'react-router'
+import { Navigate, createHashRouter } from 'react-router'
 import { RequireAuth } from './auth/RequireAuth'
 import { AppLayout } from './components/layout/AppLayout'
 import type { RouteHandle } from './components/layout/usePageTitle'
@@ -9,7 +9,7 @@ import Simulacao from './pages/Simulacao'
 
 const title = (t: string): RouteHandle => ({ title: t })
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   { path: '/login', element: <Login /> },
   {
     element: <RequireAuth />,
