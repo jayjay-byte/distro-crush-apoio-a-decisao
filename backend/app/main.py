@@ -1,17 +1,18 @@
 """API do Distro Crush."""
 
 import math
+import os
 from datetime import UTC, datetime
 from typing import Literal
 
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app import summary
 from app.auth import autenticar, criar_token, get_usuario_atual
-from app.db import get_db
+from app.db import DB_PATH, engine, get_db
 from app.grouping import recomendar
 from app.models import Criterion, Distro, Result, Simulation, User
 from app.schemas import (
@@ -30,7 +31,30 @@ from app.schemas import (
     split_multi,
 )
 
+if os.environ.get("VERCEL") and not DB_PATH.exists():
+    # Na Vercel o banco não vem no deploy: o seed roda no início a frio, em /tmp.
+    from scripts.seed import seed
+
+    seed(engine)
+
 app = FastAPI(title="Distro Crush", description="Sistema de Apoio à Decisão para distribuições Linux")
+
+API_PREFIX = "/api"
+
+
+@app.middleware("http")
+async def strip_api_prefix(request: Request, call_next):
+    """Na Vercel a rota pública é /api/...; localmente o proxy do Vite já tira o prefixo.
+
+    Remove /api do caminho e o guarda em `root_path`, para que /api/docs também funcione.
+    """
+    path = request.scope["path"]
+    if path == API_PREFIX or path.startswith(f"{API_PREFIX}/"):
+        request.scope["path"] = path[len(API_PREFIX):] or "/"
+        request.scope["raw_path"] = request.scope["path"].encode()
+        request.scope["root_path"] = API_PREFIX
+    return await call_next(request)
+
 
 app.add_middleware(
     CORSMiddleware,

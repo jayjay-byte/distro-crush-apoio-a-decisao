@@ -1,12 +1,23 @@
 """Conexão com o SQLite (backend/distro_crush.db)."""
 
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-DB_PATH = Path(__file__).resolve().parents[1] / "distro_crush.db"
+
+def _default_db_path() -> Path:
+    """`DISTRO_CRUSH_DB_PATH`, se definido; na Vercel, /tmp (único diretório gravável)."""
+    if env_path := os.environ.get("DISTRO_CRUSH_DB_PATH"):
+        return Path(env_path)
+    if os.environ.get("VERCEL"):
+        return Path("/tmp/distro_crush.db")
+    return Path(__file__).resolve().parents[1] / "distro_crush.db"
+
+
+DB_PATH = _default_db_path()
 
 
 class Base(DeclarativeBase):

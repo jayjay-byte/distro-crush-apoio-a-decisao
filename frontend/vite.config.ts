@@ -4,7 +4,8 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/distro-crush-apoio-a-decisao/',
+  // Vercel e dev local servem na raiz; o GitHub Pages define VITE_BASE_PATH no workflow.
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
