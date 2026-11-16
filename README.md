@@ -53,4 +53,4 @@ Acesse `http://localhost:5173`. O Vite encaminha as chamadas `/api` para o backe
 
 ## Autora
 
-Jai ([@jayjay-byte](https://github.com/jayjay-byte))
+Jaiana Santana
