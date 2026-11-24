@@ -5,17 +5,19 @@ import {
   House,
   Monitor,
   RefreshCw,
+  RotateCcw,
   Server,
   ShieldCheck,
   Sparkles,
   Target,
   Users,
 } from 'lucide-react'
-import type { ReactNode, SubmitEvent } from 'react'
-import type { Ambiente, Arquitetura, Nivel, OpcoesOut, Tarefa } from '../../api/types'
+import { useId, type ReactNode, type SubmitEvent } from 'react'
+import type { Ambiente, Arquitetura, CriterioId, CriterioOut, Nivel, OpcoesOut, Tarefa } from '../../api/types'
 import type { RequestState } from '../../hooks/useRequest'
 import {
   AJUDA_LABEL,
+  CRITERIO_LABEL,
   AMBIENTE_LABEL,
   ARQUITETURA_LABEL,
   ATUALIZACOES_LABEL,
@@ -31,7 +33,17 @@ import { Panel } from '../ui/Panel'
 import { RangeNumberField } from '../ui/RangeNumberField'
 import { SelectField } from '../ui/SelectField'
 import { ToggleChip } from '../ui/ToggleChip'
-import { CAMPO_ID, toggleAjuda, type FormErrors, type FormState } from './formState'
+import { WeightField } from '../ui/WeightField'
+import {
+  criteriosRespondidos,
+  CAMPO_ID,
+  pesoCampoId,
+  pesoTexto,
+  toggleAjuda,
+  type FormErrors,
+  type FormState,
+  type Sugeridos,
+} from './formState'
 
 const AMBIENTE_ICON = { desktop: Monitor, servidor: Server, nuvem: Cloud }
 
@@ -41,14 +53,24 @@ const NIVEL_DICA: Record<Nivel, string> = {
   avancado: 'Avançado: configuro e mantenho o sistema por conta própria.',
 }
 
-function Pergunta({ titulo, children }: { titulo: string; children: ReactNode }) {
+const PESOS_DESCRICAO =
+  'Ao lado de algumas perguntas, você pode dar uma nota de 0 a 10 para o quanto aquele critério importa para você. O que conta é a proporção entre as notas. Se não alterar nenhuma nota, o sistema usa os pesos sugeridos pelo método ROC.'
+
+const NAO_ENTRA = 'Não entra no cálculo'
+
+/** Pergunta com título e, opcionalmente, o campo de peso do critério à direita. */
+function Pergunta({ titulo, peso, children }: { titulo: string; peso?: ReactNode; children: ReactNode }) {
+  const tituloId = useId()
   return (
-    <fieldset className="flex min-w-0 flex-col gap-2.5">
-      <legend className="mb-2.5 text-body font-semibold text-fg">
-        {titulo}
-      </legend>
+    <div role="group" aria-labelledby={tituloId} className="flex min-w-0 flex-col gap-2.5">
+      <div className="mb-2.5 flex items-start gap-3">
+        <p id={tituloId} className="min-w-0 flex-1 text-body font-semibold text-fg">
+          {titulo}
+        </p>
+        {peso}
+      </div>
       {children}
-    </fieldset>
+    </div>
   )
 }
 
@@ -58,6 +80,9 @@ type SimulacaoFormProps = {
   /** Erros já visíveis (os de RAM/disco aparecem ao digitar; o de tarefa, ao enviar). */
   errors: FormErrors
   opcoes: RequestState<OpcoesOut>
+  /** GET /criterios: pesos sugeridos (0 a 10). */
+  criterios: RequestState<CriterioOut[]>
+  sugeridos: Sugeridos
   onSubmit: () => void
   loading: boolean
   /** "10 respostas preenchidas · última análise em …". */
@@ -65,8 +90,36 @@ type SimulacaoFormProps = {
 }
 
 /** Formulário das 10 perguntas (Figma 10:22810), em 3 painéis. */
-export function SimulacaoForm({ form, onChange, errors, opcoes, onSubmit, loading, rodape }: SimulacaoFormProps) {
+export function SimulacaoForm({
+  form,
+  onChange,
+  errors,
+  opcoes,
+  criterios,
+  sugeridos,
+  onSubmit,
+  loading,
+  rodape,
+}: SimulacaoFormProps) {
   const tarefaAtiva = form.proposito === 'tarefa_especifica'
+  const respondidos = criteriosRespondidos(form)
+  const alterados = Object.keys(form.pesos).length > 0
+
+  /** Campo de peso do critério: desabilitado sem resposta ou sem os sugeridos. */
+  function peso(criterio: CriterioId) {
+    const respondido = respondidos.has(criterio)
+    return (
+      <WeightField
+        id={pesoCampoId(criterio)}
+        criterio={CRITERIO_LABEL[criterio]}
+        value={pesoTexto(form, criterio, sugeridos)}
+        onChange={(texto) => onChange({ pesos: { ...form.pesos, [criterio]: texto } })}
+        disabled={sugeridos === null || !respondido}
+        hint={!respondido ? NAO_ENTRA : undefined}
+        error={errors.peso?.[criterio]}
+      />
+    )
+  }
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -81,10 +134,43 @@ export function SimulacaoForm({ form, onChange, errors, opcoes, onSubmit, loadin
 
   return (
     <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <Panel
+        title="Pesos dos critérios (opcional)"
+        description={PESOS_DESCRICAO}
+        actions={
+          <Button
+            variant="secondary"
+            icon={RotateCcw}
+            disabled={!alterados || sugeridos === null}
+            onClick={() => onChange({ pesos: {} })}
+            className="self-start"
+          >
+            Restaurar pesos sugeridos (ROC)
+          </Button>
+        }
+      >
+        {criterios.error ? (
+          <Alert
+            variant="erro"
+            action={
+              <button type="button" onClick={criterios.retry} className="font-semibold text-accent hover:underline">
+                Tentar novamente
+              </button>
+            }
+          >
+            {criterios.error} Você ainda pode simular com os pesos ROC.
+          </Alert>
+        ) : criterios.loading ? (
+          <p className="text-small text-fg-muted">Carregando pesos sugeridos…</p>
+        ) : errors.pesos ? (
+          <Alert variant="erro">{errors.pesos}.</Alert>
+        ) : null}
+      </Panel>
+
       <Panel title="01 · Perfil de uso" description="O que você precisa e como prefere trabalhar.">
         <div className="grid gap-x-6 gap-y-5 lg:grid-cols-2">
           <div className="flex flex-col gap-4">
-            <Pergunta titulo="Qual é o propósito de uso?">
+            <Pergunta titulo="Qual é o propósito de uso?" peso={peso('proposito')}>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <OptionCard
                   type="radio"
@@ -156,7 +242,7 @@ export function SimulacaoForm({ form, onChange, errors, opcoes, onSubmit, loadin
             </div>
           </Pergunta>
 
-          <Pergunta titulo="Que tipo de ajuda é importante para você? (marque quantas quiser)">
+          <Pergunta titulo="Que tipo de ajuda é importante para você? (marque quantas quiser)" peso={peso('suporte')}>
             <div className="flex flex-col gap-2 sm:flex-row">
               <OptionCard
                 type="checkbox"
@@ -185,7 +271,7 @@ export function SimulacaoForm({ form, onChange, errors, opcoes, onSubmit, loadin
             </div>
           </Pergunta>
 
-          <Pergunta titulo="Qual é seu nível de experiência?">
+          <Pergunta titulo="Qual é seu nível de experiência?" peso={peso('usabilidade')}>
             <div className="flex flex-wrap gap-1.5">
               {(Object.keys(NIVEL_LABEL) as Nivel[]).map((nivel) => (
                 <ToggleChip
@@ -255,7 +341,7 @@ export function SimulacaoForm({ form, onChange, errors, opcoes, onSubmit, loadin
         title="03 · Estabilidade e preferências"
         description="Escolha o modelo de atualização. Os campos marcados como opcionais refinam a análise, sem eliminar distros."
       >
-        <Pergunta titulo="Como você prefere receber atualizações?">
+        <Pergunta titulo="Como você prefere receber atualizações?" peso={peso('estabilidade')}>
           <div className="flex flex-col gap-2 sm:flex-row">
             {(
               [
@@ -287,20 +373,27 @@ export function SimulacaoForm({ form, onChange, errors, opcoes, onSubmit, loadin
         </Pergunta>
 
         <div className="flex flex-col gap-4 sm:flex-row">
-          <SelectField
-            label="Ambiente gráfico (opcional)"
-            value={form.desktop}
-            onChange={(e) => onChange({ desktop: e.target.value })}
-            options={selectOptions(opcoes.data?.desktops)}
-            disabled={opcoesCarregando}
-          />
-          <SelectField
-            label="Sistema init (opcional)"
-            value={form.init}
-            onChange={(e) => onChange({ init: e.target.value })}
-            options={selectOptions(opcoes.data?.init)}
-            disabled={opcoesCarregando}
-          />
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <SelectField
+              label="Ambiente gráfico (opcional)"
+              value={form.desktop}
+              onChange={(e) => onChange({ desktop: e.target.value })}
+              options={selectOptions(opcoes.data?.desktops)}
+              disabled={opcoesCarregando}
+            />
+            {/* Alinha o campo de peso ao <select>, abaixo do rótulo. */}
+            <div className="mt-7">{peso('ambiente_grafico')}</div>
+          </div>
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <SelectField
+              label="Sistema init (opcional)"
+              value={form.init}
+              onChange={(e) => onChange({ init: e.target.value })}
+              options={selectOptions(opcoes.data?.init)}
+              disabled={opcoesCarregando}
+            />
+            <div className="mt-7">{peso('init')}</div>
+          </div>
         </div>
         {opcoes.error ? (
           <Alert
@@ -321,7 +414,10 @@ export function SimulacaoForm({ form, onChange, errors, opcoes, onSubmit, loadin
       </Panel>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <p className="flex-1 text-label text-fg-muted">{rodape}</p>
+        <div className="flex flex-1 flex-col gap-0.5">
+          <p className="text-label text-fg-muted">{rodape}</p>
+          {errors.pesos && <p className="text-label font-semibold text-danger">{errors.pesos}.</p>}
+        </div>
         <Button type="submit" icon={Sparkles} loading={loading}>
           Atualizar recomendação
         </Button>
