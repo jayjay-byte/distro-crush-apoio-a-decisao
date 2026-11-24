@@ -7,7 +7,7 @@ Especificação: docs/definicao-sistema.md, seção 4.
 from dataclasses import dataclass, field
 
 from app.criteria import CRITERIOS, roc_weights
-from app.schemas import DistroOut, Respostas
+from app.schemas import DistroOut, PesosOrigem, PesosUsuario, Respostas
 
 # Tarefa escolhida na tela -> valores de `tarefa_tipo` que correspondem a ela.
 TAREFAS: dict[str, set[str]] = {
@@ -41,6 +41,22 @@ def pesos(iguais: bool = False) -> dict[str, float]:
     n = len(CRITERIOS)
     valores = [1 / n] * n if iguais else roc_weights(n)
     return {cid: peso for (cid, _), peso in zip(CRITERIOS, valores)}
+
+
+def pesos_do_usuario(notas: PesosUsuario) -> dict[str, float]:
+    """Pontuação direta normalizada (SMART, Edwards 1977): peso_k = nota_k / Σ notas."""
+    valores = notas.model_dump()
+    total = sum(valores.values())  # > 0: garantido pela validação de `Respostas`
+    return {cid: valores[cid] / total for cid, _ in CRITERIOS}
+
+
+def pesos_usados(r: Respostas, pesos_iguais: bool = False) -> tuple[dict[str, float], PesosOrigem]:
+    """Pesos da simulação e sua origem: pesos iguais (sensibilidade), do usuário ou ROC."""
+    if pesos_iguais:
+        return pesos(iguais=True), "iguais"
+    if r.pesos is not None:
+        return pesos_do_usuario(r.pesos), "usuario"
+    return pesos(), "roc"
 
 
 # --- Fase 1: triagem -------------------------------------------------------
@@ -175,8 +191,11 @@ def chave_desempate(av: Avaliacao) -> tuple:
 
 
 def ranquear(distros: list[DistroOut], r: Respostas, pesos_iguais: bool = False) -> list[Avaliacao]:
-    """Triagem + IA + ordenação. Devolve só as compatíveis, com `posicao_geral` a partir de 1."""
-    pesos_criterios = pesos(pesos_iguais)
+    """Triagem + IA + ordenação. Devolve só as compatíveis, com `posicao_geral` a partir de 1.
+
+    Pesos: iguais se `pesos_iguais`; senão os de `r.pesos`, se houver; senão ROC.
+    """
+    pesos_criterios, _ = pesos_usados(r, pesos_iguais)
     avaliacoes = sorted(
         (avaliar(d, r, pesos_criterios) for d in triagem(distros, r)),
         key=chave_desempate,

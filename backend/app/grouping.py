@@ -7,8 +7,8 @@ Especificação: docs/definicao-sistema.md, seção 5.3.
 from dataclasses import asdict
 
 from app import explain
-from app.decision import Avaliacao, ranquear, rotulo
-from app.schemas import DistroOut, DistroResultado, GrupoResultado, Respostas, Resultado
+from app.decision import Avaliacao, pesos_usados, ranquear, rotulo
+from app.schemas import DistroOut, DistroResultado, GrupoResultado, PesosOrigem, Respostas, Resultado
 
 MIN_DISTROS_GRUPO = 2
 MIN_GRUPOS = 3  # mínimo da faixa 3–7 do agrupamento
@@ -28,7 +28,7 @@ def _distro_resultado(av: Avaliacao, r: Respostas) -> DistroResultado:
     )
 
 
-def montar_resultado(ranking: list[Avaliacao], r: Respostas) -> Resultado:
+def montar_resultado(ranking: list[Avaliacao], r: Respostas, pesos_origem: PesosOrigem = "roc") -> Resultado:
     """Recebe as compatíveis já ordenadas (saída de `ranquear`)."""
     por_grupo: dict[str, list[Avaliacao]] = {}
     for av in ranking:
@@ -60,6 +60,7 @@ def montar_resultado(ranking: list[Avaliacao], r: Respostas) -> Resultado:
     return Resultado(
         compativeis=len(ranking),
         peso_respondido=ranking[0].peso_respondido if ranking else 0.0,
+        pesos_origem=pesos_origem,
         destaques=destaques,
         grupos=grupos,
         tambem_compativeis=tambem,
@@ -69,7 +70,8 @@ def montar_resultado(ranking: list[Avaliacao], r: Respostas) -> Resultado:
 
 def recomendar(distros: list[DistroOut], r: Respostas, pesos_iguais: bool = False) -> Resultado:
     """Ponto de entrada do motor: triagem, IA, ranking e agrupamento."""
-    return montar_resultado(ranquear(distros, r, pesos_iguais), r)
+    _, origem = pesos_usados(r, pesos_iguais)
+    return montar_resultado(ranquear(distros, r, pesos_iguais), r, origem)
 
 
 def _media(membros: list[Avaliacao]) -> float:

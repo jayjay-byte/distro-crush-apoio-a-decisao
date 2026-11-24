@@ -3,7 +3,8 @@
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator, model_validator
+from pydantic_core import PydanticCustomError
 
 from app.models import Distro
 
@@ -63,7 +64,8 @@ class CriterioOut(BaseModel):
     id: str
     nome: str
     ordem: int
-    peso: float
+    peso: float  # peso ROC exato
+    peso_sugerido: int  # escala de 0 a 10 do usuário: round(10 × w_k / w_1)
 
 
 class OpcoesOut(BaseModel):
@@ -71,8 +73,35 @@ class OpcoesOut(BaseModel):
     desktops: list[str]
 
 
+# Nota de importância de 0 a 10, só inteiro (2.5, "5" e true são recusados).
+NotaPeso = Annotated[int, Field(strict=True, ge=0, le=10)]
+
+PesosOrigem = Literal["roc", "usuario", "iguais"]  # "iguais" só no what-if com pesos=iguais
+
+MSG_PESOS_ZERADOS = "Defina ao menos um peso maior que zero"
+
+
+class PesosUsuario(BaseModel):
+    """Importância de cada critério ponderado, de 0 a 10 (as 6 chaves são obrigatórias).
+
+    O motor normaliza: peso_k = nota_k / Σ notas (pontuação direta, SMART).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    proposito: NotaPeso
+    usabilidade: NotaPeso
+    suporte: NotaPeso
+    estabilidade: NotaPeso
+    init: NotaPeso
+    ambiente_grafico: NotaPeso
+
+
 class Respostas(BaseModel):
-    """Respostas do formulário de simulação. `None` = uso geral / sem preferência."""
+    """Respostas do formulário de simulação. `None` = uso geral / sem preferência.
+
+    `pesos` ausente ou `None`: o motor usa os pesos ROC.
+    """
 
     tarefa: Literal["jogos", "seguranca", "hardware_antigo"] | None = None
     ambiente: Literal["desktop", "servidor", "nuvem"]
@@ -84,6 +113,7 @@ class Respostas(BaseModel):
     atualizacoes: Literal["padrao", "rolling"] | None = None
     init: str | None = None
     desktop: str | None = None
+    pesos: PesosUsuario | None = None
 
     @field_validator("ajuda")
     @classmethod
@@ -99,6 +129,25 @@ class Respostas(BaseModel):
         if value is None:
             return None
         return value.strip() or None
+
+    def criterios_respondidos(self) -> set[str]:
+        """Critérios que entram no IA. Propósito e usabilidade são sempre respondidos."""
+        opcionais = {
+            "suporte": self.ajuda,
+            "estabilidade": self.atualizacoes,
+            "init": self.init,
+            "ambiente_grafico": self.desktop,
+        }
+        return {"proposito", "usabilidade"} | {cid for cid, valor in opcionais.items() if valor is not None}
+
+    @model_validator(mode="after")
+    def _pesos_respondidos(self) -> "Respostas":
+        # Sem peso nos critérios respondidos o IA ficaria 0 / 0.
+        if self.pesos is not None:
+            notas = self.pesos.model_dump()
+            if sum(notas[cid] for cid in self.criterios_respondidos()) == 0:
+                raise PydanticCustomError("pesos_zerados", MSG_PESOS_ZERADOS)
+        return self
 
 
 class ContribuicaoOut(BaseModel):
@@ -133,6 +182,8 @@ class Resultado(BaseModel):
 
     compativeis: int
     peso_respondido: float
+    # Pesos usados nas contribuições. Snapshots antigos, sem o campo, foram calculados com ROC.
+    pesos_origem: PesosOrigem = "roc"
     destaques: list[DistroResultado]
     grupos: list[GrupoResultado]
     tambem_compativeis: list[DistroResultado]
@@ -216,13 +267,29 @@ class RankingGrupos(BaseModel):
     grupos: list[GrupoRanking]
 
 
+class LadoSensibilidade(BaseModel):
+    chave: PesosOrigem  # "usuario", "roc" ou "iguais"
+    rotulo: str  # "Seus pesos", "Pesos ROC" ou "Pesos iguais"
+    ranking: RankingGrupos
+
+
 class SensibilidadeOut(BaseModel):
-    """Ranking de grupos com pesos ROC e com pesos iguais, recalculados com a base atual."""
+    """Comparação de rankings de grupos, todos recalculados com as respostas salvas e a base atual.
+
+    - `comparacao = "roc_iguais"` (simulação sem pesos): principal = ROC, alternativo = pesos iguais;
+    - `comparacao = "usuario_roc"` (simulação com pesos): principal = seus pesos, alternativo = ROC.
+
+    `mesmo_primeiro_grupo` compara principal × alternativo. `roc` e `iguais` continuam sempre
+    preenchidos, como antes desta mudança.
+    """
 
     simulacao_id: int
+    comparacao: Literal["roc_iguais", "usuario_roc"]
+    principal: LadoSensibilidade
+    alternativo: LadoSensibilidade
+    mesmo_primeiro_grupo: bool
     roc: RankingGrupos
     iguais: RankingGrupos
-    mesmo_primeiro_grupo: bool
 
 
 # --- Dashboard -------------------------------------------------------------
