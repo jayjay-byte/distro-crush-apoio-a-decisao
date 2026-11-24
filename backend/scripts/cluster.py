@@ -15,7 +15,10 @@ O script não altera a planilha nem o banco: só imprime o resultado, para compa
 com a coluna `grupo` da ficha, e salva o dendrograma.
 
 Uso (dentro de backend/):
-    python scripts/cluster.py [--xlsx caminho.xlsx] [--png caminho.png]
+    python scripts/cluster.py [--xlsx caminho.xlsx] [--saida caminho.pdf|caminho.png]
+
+Por padrão, o dendrograma é salvo em docs/dendrograma_distros.pdf. O formato
+(.pdf ou .png) é definido pela extensão do arquivo passado em --saida.
 """
 
 import argparse
@@ -34,7 +37,8 @@ from sklearn.metrics import adjusted_rand_score, silhouette_score  # noqa: E402
 
 from scripts.seed import GRUPO_NOMES, XLSX_PATH, load_distros  # noqa: E402
 
-PNG_PATH = BACKEND_DIR.parent / "docs" / "dendrograma_distros.png"
+DENDROGRAM_PATH = BACKEND_DIR.parent / "docs" / "dendrograma_distros.pdf"
+DENDROGRAM_FORMATS = (".pdf", ".png")
 
 K_MIN, K_MAX, MIN_PER_GROUP = 3, 7, 2
 
@@ -242,15 +246,22 @@ def print_report(result: Clustering) -> None:
 
 
 def main() -> None:
+    # O relatório usa caracteres fora do cp1252 (ex.: "✗"), que o console do Windows não imprime.
+    sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Recalcula o agrupamento das distros (só imprime).")
     parser.add_argument("--xlsx", type=Path, default=XLSX_PATH, help="planilha de origem")
-    parser.add_argument("--png", type=Path, default=PNG_PATH, help="arquivo do dendrograma")
+    parser.add_argument(
+        "--saida", type=Path, default=DENDROGRAM_PATH,
+        help="arquivo do dendrograma (.pdf ou .png, pela extensão)",
+    )
     args = parser.parse_args()
+    if args.saida.suffix.casefold() not in DENDROGRAM_FORMATS:
+        parser.error("--saida deve terminar em .pdf ou .png")
 
     result = cluster(load_distros(args.xlsx))
     print_report(result)
-    save_dendrogram(result, args.png)
-    print(f"\nDendrograma salvo em {args.png.resolve()}")
+    save_dendrogram(result, args.saida)
+    print(f"\nDendrograma salvo em {args.saida.resolve()}")
 
 
 if __name__ == "__main__":
