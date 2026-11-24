@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, Equal, Repeat2, ShieldCheck } from 'lucide-react'
 import { getSensibilidade } from '../../api/relatorios'
-import type { GrupoRanking, RankingGrupos } from '../../api/types'
+import type { GrupoRanking, RankingGrupos, SensibilidadeOut } from '../../api/types'
 import { useRequest } from '../../hooks/useRequest'
 import { formatPercent } from '../../utils/format'
 import { IaBar } from '../result/IaBar'
@@ -10,16 +10,26 @@ import { ErrorAlert } from '../ui/ErrorAlert'
 import { LoadingCard } from '../ui/LoadingCard'
 import { Panel } from '../ui/Panel'
 
-const DESCRICAO =
-  'Ranking de grupos recalculado com as respostas salvas e a base atual: pesos ROC (usados no resultado) × pesos iguais (1/6 cada).'
+/** Rótulo da API no meio da frase: "Seus pesos" → "seus pesos", "Pesos ROC" → "pesos ROC". */
+function meioDeFrase(rotulo: string): string {
+  return rotulo.charAt(0).toLowerCase() + rotulo.slice(1)
+}
+
+function descricao(data: SensibilidadeOut | null): string {
+  const base = 'Ranking de grupos recalculado com as respostas salvas e a base atual'
+  if (!data) return `${base}.`
+  const alternativo =
+    data.comparacao === 'roc_iguais' ? `${meioDeFrase(data.alternativo.rotulo)} (1/6 cada)` : meioDeFrase(data.alternativo.rotulo)
+  return `${base}: ${meioDeFrase(data.principal.rotulo)} (usados no resultado) × ${alternativo}.`
+}
 
 function posicoes(n: number): string {
   return `${n} ${n === 1 ? 'posição' : 'posições'}`
 }
 
-/** Variação de posição do grupo com pesos iguais em relação ao ROC (pelo nome do grupo). */
-function Variacao({ grupo, roc }: { grupo: GrupoRanking; roc: RankingGrupos }) {
-  const anterior = roc.grupos.find((g) => g.nome === grupo.nome)
+/** Variação de posição do grupo no cenário alternativo em relação ao principal (pelo nome do grupo). */
+function Variacao({ grupo, principal }: { grupo: GrupoRanking; principal: RankingGrupos }) {
+  const anterior = principal.grupos.find((g) => g.nome === grupo.nome)
   if (!anterior) {
     return <span className="text-small font-semibold text-accent">novo</span>
   }
@@ -42,11 +52,11 @@ function Variacao({ grupo, roc }: { grupo: GrupoRanking; roc: RankingGrupos }) {
 type ColunaProps = {
   titulo: string
   ranking: RankingGrupos
-  /** Ranking ROC, para mostrar a variação de posição (só na coluna de pesos iguais). */
-  roc?: RankingGrupos
+  /** Ranking principal, para mostrar a variação de posição (só na coluna alternativa). */
+  principal?: RankingGrupos
 }
 
-function Coluna({ titulo, ranking, roc }: ColunaProps) {
+function Coluna({ titulo, ranking, principal }: ColunaProps) {
   return (
     <section className="flex min-w-0 flex-col gap-2">
       <h3 className="text-label font-semibold text-fg-muted">{titulo}</h3>
@@ -74,7 +84,7 @@ function Coluna({ titulo, ranking, roc }: ColunaProps) {
                 </div>
                 <span className="text-lead font-extrabold text-accent">{formatPercent(g.ia)}</span>
                 <RotuloBadge rotulo={g.rotulo} />
-                {roc && <Variacao grupo={g} roc={roc} />}
+                {principal && <Variacao grupo={g} principal={principal} />}
               </div>
               <IaBar ia={g.ia} />
             </li>
@@ -87,8 +97,9 @@ function Coluna({ titulo, ranking, roc }: ColunaProps) {
 
 /**
  * Análise de sensibilidade (sem frame no Figma; layout aprovado na Fase 4c):
- * alerta se o 1º grupo se manteve + rankings ROC e pesos iguais lado a lado,
- * com a variação de posição na coluna de pesos iguais. Carrega à parte.
+ * alerta se o 1º grupo se manteve + rankings principal e alternativo lado a
+ * lado (seus pesos × ROC, ou ROC × pesos iguais, com os rótulos da API), com a
+ * variação de posição na coluna alternativa. Carrega à parte.
  */
 export function SensibilidadePanel({ simulacaoId }: { simulacaoId: number }) {
   const { data, loading, error, retry } = useRequest(
@@ -98,34 +109,43 @@ export function SensibilidadePanel({ simulacaoId }: { simulacaoId: number }) {
   )
 
   return (
-    <Panel title="Análise de sensibilidade" description={DESCRICAO}>
+    <Panel title="Análise de sensibilidade" description={descricao(data)}>
       {loading ? (
         <LoadingCard>Calculando a sensibilidade…</LoadingCard>
       ) : error || !data ? (
         <ErrorAlert message={error ?? 'Não foi possível carregar a análise de sensibilidade.'} onRetry={retry} />
-      ) : data.roc.grupos.length === 0 && data.iguais.grupos.length === 0 ? (
+      ) : data.principal.ranking.grupos.length === 0 && data.alternativo.ranking.grupos.length === 0 ? (
         <p className="rounded-md border border-dashed border-line p-6 text-center text-body text-fg-muted">
           Nenhum grupo exibido nos dois cenários.
         </p>
       ) : (
         <>
           {data.mesmo_primeiro_grupo ? (
-            <Alert icon={ShieldCheck} title={`O 1º grupo se manteve: ${data.roc.primeiro_grupo?.nome ?? '—'}`}>
-              Com pesos iguais, o grupo mais aderente continua o mesmo.
+            <Alert
+              icon={ShieldCheck}
+              title={`O 1º grupo se manteve: ${data.principal.ranking.primeiro_grupo?.nome ?? '—'}`}
+            >
+              Com {meioDeFrase(data.alternativo.rotulo)}, o grupo mais aderente continua o mesmo.
             </Alert>
           ) : (
             <Alert
               icon={Repeat2}
-              title={`O 1º grupo mudou: ${data.roc.primeiro_grupo?.nome ?? 'nenhum grupo'} com pesos ROC; ${
-                data.iguais.primeiro_grupo?.nome ?? 'nenhum grupo'
-              } com pesos iguais.`}
+              title={`O 1º grupo mudou: ${data.principal.ranking.primeiro_grupo?.nome ?? 'nenhum grupo'} com ${meioDeFrase(
+                data.principal.rotulo,
+              )}; ${data.alternativo.ranking.primeiro_grupo?.nome ?? 'nenhum grupo'} com ${meioDeFrase(
+                data.alternativo.rotulo,
+              )}.`}
             >
               O grupo mais aderente depende da importância dada a cada critério.
             </Alert>
           )}
           <div className="grid gap-4 lg:grid-cols-2">
-            <Coluna titulo="Pesos ROC (usados)" ranking={data.roc} />
-            <Coluna titulo="Pesos iguais" ranking={data.iguais} roc={data.roc} />
+            <Coluna titulo={`${data.principal.rotulo} (usados)`} ranking={data.principal.ranking} />
+            <Coluna
+              titulo={data.alternativo.rotulo}
+              ranking={data.alternativo.ranking}
+              principal={data.principal.ranking}
+            />
           </div>
         </>
       )}
