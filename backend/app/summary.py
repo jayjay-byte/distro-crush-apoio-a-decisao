@@ -15,6 +15,7 @@ from app.schemas import (
     DistroResumo,
     GrupoRanking,
     GrupoResumo,
+    LadoSensibilidade,
     PontoIA,
     PrimeiroGrupoDetalhe,
     PropositoContagem,
@@ -106,15 +107,39 @@ def ranking_grupos(res: Resultado) -> RankingGrupos:
     return RankingGrupos(primeiro_grupo=grupos[0] if grupos else None, grupos=grupos)
 
 
-def sensibilidade(simulacao_id: int, roc: Resultado, iguais: Resultado) -> SensibilidadeOut:
-    r_roc, r_iguais = ranking_grupos(roc), ranking_grupos(iguais)
-    nome_roc = r_roc.primeiro_grupo.nome if r_roc.primeiro_grupo else None
-    nome_iguais = r_iguais.primeiro_grupo.nome if r_iguais.primeiro_grupo else None
+ROTULOS_PESOS = {"usuario": "Seus pesos", "roc": "Pesos ROC", "iguais": "Pesos iguais"}
+
+
+def _nome_primeiro(r: RankingGrupos) -> str | None:
+    return r.primeiro_grupo.nome if r.primeiro_grupo else None
+
+
+def sensibilidade(
+    simulacao_id: int,
+    roc: Resultado,
+    iguais: Resultado,
+    usuario: Resultado | None = None,
+) -> SensibilidadeOut:
+    """Com pesos do usuário: seus pesos × ROC. Sem pesos: ROC × pesos iguais."""
+    rankings = {"roc": ranking_grupos(roc), "iguais": ranking_grupos(iguais)}
+    if usuario is not None:
+        rankings["usuario"] = ranking_grupos(usuario)
+        comparacao, chave_principal, chave_alternativo = "usuario_roc", "usuario", "roc"
+    else:
+        comparacao, chave_principal, chave_alternativo = "roc_iguais", "roc", "iguais"
+
+    principal, alternativo = (
+        LadoSensibilidade(chave=chave, rotulo=ROTULOS_PESOS[chave], ranking=rankings[chave])
+        for chave in (chave_principal, chave_alternativo)
+    )
     return SensibilidadeOut(
         simulacao_id=simulacao_id,
-        roc=r_roc,
-        iguais=r_iguais,
-        mesmo_primeiro_grupo=nome_roc == nome_iguais,
+        comparacao=comparacao,
+        principal=principal,
+        alternativo=alternativo,
+        mesmo_primeiro_grupo=_nome_primeiro(principal.ranking) == _nome_primeiro(alternativo.ranking),
+        roc=rankings["roc"],
+        iguais=rankings["iguais"],
     )
 
 

@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from app import summary
 from app.auth import autenticar, criar_token, get_usuario_atual
 from app.db import DB_PATH, engine, get_db
+from app.criteria import suggested_weights
 from app.grouping import recomendar
 from app.models import Criterion, Distro, Result, Simulation, User
 from app.schemas import (
@@ -40,6 +41,8 @@ if os.environ.get("VERCEL") and not DB_PATH.exists():
 app = FastAPI(title="Distro Crush", description="Sistema de Apoio à Decisão para distribuições Linux")
 
 API_PREFIX = "/api"
+
+MSG_PESOS_CONFLITO = "Não envie pesos junto com pesos=iguais"
 
 
 @app.middleware("http")
@@ -76,11 +79,16 @@ def _distinct(values: list[str | None]) -> list[str]:
     return sorted(unique, key=str.casefold)
 
 
+def _respostas(sim: Simulation) -> Respostas:
+    """Respostas salvas, com os pesos da coluna própria (`None` = ROC)."""
+    return Respostas.model_validate({**sim.respostas, "pesos": sim.pesos})
+
+
 def _salva(sim: Simulation) -> summary.SimulacaoSalva:
     return summary.SimulacaoSalva(
         id=sim.id,
         data=sim.criado_em,
-        respostas=Respostas.model_validate(sim.respostas),
+        respostas=_respostas(sim),
         resultado=Resultado.model_validate(sim.resultado.dados),
     )
 
@@ -112,8 +120,13 @@ def get_distro(distro_id: str, db: Session = Depends(get_db)) -> DistroOut:
 
 
 @app.get("/criterios", response_model=list[CriterioOut])
-def list_criterios(db: Session = Depends(get_db)) -> list[Criterion]:
-    return list(db.scalars(select(Criterion).order_by(Criterion.ordem)))
+def list_criterios(db: Session = Depends(get_db)) -> list[CriterioOut]:
+    """Critérios com o peso ROC exato e o peso sugerido na escala de 0 a 10."""
+    sugeridos = suggested_weights()
+    return [
+        CriterioOut(id=c.id, nome=c.nome, ordem=c.ordem, peso=c.peso, peso_sugerido=sugeridos[c.id])
+        for c in db.scalars(select(Criterion).order_by(Criterion.ordem))
+    ]
 
 
 @app.get("/opcoes", response_model=OpcoesOut)
@@ -149,7 +162,15 @@ def recomendacao(
     db: Session = Depends(get_db),
     _: User = Depends(get_usuario_atual),
 ) -> Resultado:
-    """What-if: calcula sem salvar. `pesos=iguais` para a análise de sensibilidade."""
+    """What-if: calcula sem salvar. Usa `respostas.pesos` se houver; senão ROC.
+
+    `pesos=iguais` (análise de sensibilidade) não pode vir junto com `respostas.pesos`.
+    """
+    if pesos == "iguais" and respostas.pesos is not None:
+        raise HTTPException(
+            status_code=422,
+            detail=MSG_PESOS_CONFLITO,
+        )
     return recomendar(fetch_distros(db), respostas, pesos_iguais=pesos == "iguais")
 
 
@@ -159,11 +180,12 @@ def salvar_simulacao(
     db: Session = Depends(get_db),
     usuario: User = Depends(get_usuario_atual),
 ) -> SimulacaoDetalhe:
-    """Calcula com pesos ROC e salva as respostas e o snapshot do resultado."""
+    """Calcula com os pesos do usuário (ou ROC, sem pesos) e salva respostas, pesos e snapshot."""
     resultado = recomendar(fetch_distros(db), respostas)
     sim = Simulation(
         usuario_id=usuario.id,
-        respostas=respostas.model_dump(mode="json"),
+        respostas=respostas.model_dump(mode="json", exclude={"pesos"}),
+        pesos=respostas.pesos.model_dump() if respostas.pesos is not None else None,
         resultado=Result(dados=resultado.model_dump(mode="json")),
     )
     db.add(sim)
@@ -212,14 +234,19 @@ def sensibilidade(
     db: Session = Depends(get_db),
     usuario: User = Depends(get_usuario_atual),
 ) -> SensibilidadeOut:
-    """ROC × pesos iguais, os dois recalculados com as respostas salvas e a base atual."""
+    """Seus pesos × ROC (simulação com pesos) ou ROC × pesos iguais (sem pesos).
+
+    Todos os cenários são recalculados com as respostas salvas e a base atual.
+    """
     sim = _simulacao_do_usuario(db, simulacao_id, usuario)
-    respostas = Respostas.model_validate(sim.respostas)
+    respostas = _respostas(sim)
+    sem_pesos = respostas.model_copy(update={"pesos": None})
     distros = fetch_distros(db)
     return summary.sensibilidade(
         sim.id,
-        roc=recomendar(distros, respostas),
-        iguais=recomendar(distros, respostas, pesos_iguais=True),
+        roc=recomendar(distros, sem_pesos),
+        iguais=recomendar(distros, sem_pesos, pesos_iguais=True),
+        usuario=recomendar(distros, respostas) if respostas.pesos is not None else None,
     )
 
 
