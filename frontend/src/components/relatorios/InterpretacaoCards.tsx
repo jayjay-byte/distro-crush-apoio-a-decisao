@@ -52,7 +52,14 @@ function hardwareEPreferencias(r: Resultado, respostas: Respostas): string {
   const tarefa = respostas.tarefa
     ? ` A tarefa ${TAREFA_LABEL[respostas.tarefa]} também filtra as distros de propósito específico.`
     : ''
-  return `${triagem}${tarefa} As preferências (ajuda, atualizações, init e ambiente gráfico) só alteram o IA.`
+  return `${triagem}${tarefa} As preferências (ajuda, atualizações, init e ambiente gráfico) só alteram o IA. ${pesosUsados(r)}`
+}
+
+/** Origem dos pesos, pelo snapshot (sem o campo = ROC). */
+function pesosUsados(r: Resultado): string {
+  return (r.pesos_origem ?? 'roc') === 'usuario'
+    ? 'Esta simulação usou pesos personalizados: as notas de 0 a 10 que você deu a cada critério.'
+    : 'Esta simulação usou os pesos sugeridos pelo método ROC.'
 }
 
 const LIMITES =

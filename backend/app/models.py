@@ -98,7 +98,8 @@ class Simulation(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"))
-    respostas: Mapped[dict] = mapped_column(JSON)
+    respostas: Mapped[dict] = mapped_column(JSON)  # sem `pesos`, que fica na coluna própria
+    pesos: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # notas 0 a 10; None = ROC
     criado_em: Mapped[datetime] = mapped_column(UTCDateTime, default=_agora)
 
     usuario: Mapped[User] = relationship(back_populates="simulacoes")

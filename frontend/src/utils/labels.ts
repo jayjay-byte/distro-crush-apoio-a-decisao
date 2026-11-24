@@ -1,7 +1,17 @@
 // Rótulos da tela para os valores da API ("Correspondência entre tela e ficha" no CLAUDE.md).
 // Reaproveitados no formulário, no detalhamento e em Relatórios.
 
-import type { Ajuda, Ambiente, Arquitetura, Atualizacoes, CriterioId, Nivel, Respostas, Tarefa } from '../api/types'
+import type {
+  Ajuda,
+  Ambiente,
+  Arquitetura,
+  Atualizacoes,
+  CriterioId,
+  Nivel,
+  PesosUsuario,
+  Respostas,
+  Tarefa,
+} from '../api/types'
 import { formatGb } from './format'
 
 export const SEM_PREFERENCIA = 'Sem preferência'
@@ -82,4 +92,12 @@ export function respostasLabels(r: Respostas): { label: string; valor: string }[
     { label: 'Ambiente gráfico', valor: r.desktop ?? SEM_PREFERENCIA },
     { label: 'Sistema init', valor: r.init ?? SEM_PREFERENCIA },
   ]
+}
+
+export const PESOS_SUGERIDOS_LABEL = 'Pesos sugeridos (ROC)'
+
+/** "Pesos sugeridos (ROC)" sem pesos; com pesos, as notas: "Propósito 10 · Usabilidade 6 · …". */
+export function pesosLabel(pesos: PesosUsuario | null | undefined): string {
+  if (!pesos) return PESOS_SUGERIDOS_LABEL
+  return (Object.keys(CRITERIO_LABEL) as CriterioId[]).map((c) => `${CRITERIO_LABEL[c]} ${pesos[c]}`).join(' · ')
 }

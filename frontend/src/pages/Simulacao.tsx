@@ -1,26 +1,30 @@
 import { Bookmark, BookmarkCheck, CircleCheck, RefreshCw } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { describeApiError } from '../api/client'
 import { recomendar, salvarSimulacao } from '../api/simulacao'
-import type { Resultado } from '../api/types'
+import type { CriterioId, PesosUsuario, Resultado } from '../api/types'
 import { PageHeader } from '../components/layout/PageHeader'
 import { ResultHeader } from '../components/result/ResultHeader'
 import { ResultView } from '../components/result/ResultView'
 import { SimulacaoForm } from '../components/simulacao/SimulacaoForm'
 import {
   CAMPO_ID,
+  ERROS_PERGUNTAS,
   INITIAL_FORM,
   TOTAL_PERGUNTAS,
   respostasKey,
   toRespostas,
   validate,
+  pesoCampoId,
   type FormErrors,
   type FormState,
+  type Sugeridos,
 } from '../components/simulacao/formState'
 import { StepsProgress } from '../components/simulacao/StepsProgress'
 import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { LoadingCard } from '../components/ui/LoadingCard'
+import { useCriterios } from '../hooks/useCriterios'
 import { useOpcoes } from '../hooks/useOpcoes'
 import { formatDataHora } from '../utils/format'
 
@@ -34,7 +38,7 @@ type Analise = {
 }
 
 /** Ordem de foco quando há erros de validação. */
-const ORDEM_ERROS: (keyof FormErrors)[] = ['tarefa', 'ram', 'disco']
+const ORDEM_ERROS = ['tarefa', 'ram', 'disco', 'pesos'] as const
 
 const SALVAR_BLOQUEADO = 'Atualize a recomendação antes de salvar'
 
@@ -49,6 +53,15 @@ function prefersReducedMotion(): boolean {
  */
 export default function Simulacao() {
   const opcoes = useOpcoes()
+  const criterios = useCriterios()
+  // Pesos sugeridos (0 a 10) de GET /criterios; nada fixo no front-end.
+  const sugeridos: Sugeridos = useMemo(
+    () =>
+      criterios.data
+        ? (Object.fromEntries(criterios.data.map((c) => [c.id, c.peso_sugerido])) as PesosUsuario)
+        : null,
+    [criterios.data],
+  )
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
   const [tentouEnviar, setTentouEnviar] = useState(false)
 
@@ -62,12 +75,13 @@ export default function Simulacao() {
 
   const resultadoRef = useRef<HTMLElement>(null)
 
-  const errors = validate(form)
+  const errors = validate(form, sugeridos)
   const valido = Object.keys(errors).length === 0
-  // RAM e disco mostram o erro ao digitar; a tarefa, só depois de tentar enviar.
-  const errosVisiveis: FormErrors = { ram: errors.ram, disco: errors.disco, tarefa: tentouEnviar ? errors.tarefa : undefined }
+  // RAM, disco e pesos mostram o erro ao digitar; a tarefa, só depois de tentar enviar.
+  const errosVisiveis: FormErrors = { ...errors, tarefa: tentouEnviar ? errors.tarefa : undefined }
 
-  const keyAtual = valido ? respostasKey(toRespostas(form)) : null
+  // Mudar uma nota conta como mudar uma resposta: entra na chave da análise.
+  const keyAtual = valido ? respostasKey(toRespostas(form, sugeridos)) : null
   const mudou = analise !== null && keyAtual !== analise.key
   const salvaAtual = salva !== null && analise !== null && !mudou && salva.key === analise.key
 
@@ -85,11 +99,13 @@ export default function Simulacao() {
   async function atualizarRecomendacao() {
     setTentouEnviar(true)
     const campoInvalido = ORDEM_ERROS.find((campo) => errors[campo])
-    if (campoInvalido) {
-      document.getElementById(CAMPO_ID[campoInvalido])?.focus()
+    const pesoVazio = errors.peso ? (Object.keys(errors.peso) as CriterioId[])[0] : undefined
+    if (campoInvalido || pesoVazio) {
+      const id = campoInvalido ? CAMPO_ID[campoInvalido] : pesoCampoId(pesoVazio!)
+      document.getElementById(id)?.focus()
       return
     }
-    const respostas = toRespostas(form)
+    const respostas = toRespostas(form, sugeridos)
     setAnalisando(true)
     setErroAnalise(null)
     try {
@@ -113,8 +129,8 @@ export default function Simulacao() {
     setSalvando(true)
     setErroSalvar(null)
     try {
-      const simulacao = await salvarSimulacao(toRespostas(form))
-      // Exibe o snapshot salvo (mesmas respostas, calculado com ROC no servidor).
+      const simulacao = await salvarSimulacao(toRespostas(form, sugeridos))
+      // Exibe o snapshot salvo (mesmas respostas e pesos, calculado no servidor).
       setAnalise((anterior) => anterior && { ...anterior, resultado: simulacao.resultado })
       setSalva({ key: keyAtual, data: simulacao.data })
     } catch (err) {
@@ -128,8 +144,8 @@ export default function Simulacao() {
   const etapas = [
     { label: 'Perfil', concluida: !errors.tarefa },
     { label: 'Hardware', concluida: !errors.ram && !errors.disco },
-    // Todas as perguntas de preferência têm "Sem preferência": a etapa está sempre respondida.
-    { label: 'Preferências', concluida: true },
+    // Todas as perguntas de preferência têm "Sem preferência"; a etapa só fica pendente com peso inválido.
+    { label: 'Preferências', concluida: !errors.pesos && !errors.peso },
     { label: 'Resultado', concluida: resultadoAtual },
   ]
   const concluidas = etapas.filter((e) => e.concluida).length
@@ -141,7 +157,7 @@ export default function Simulacao() {
         ? 'pronto para atualizar a recomendação'
         : 'complete as etapas pendentes'
 
-  const respondidas = TOTAL_PERGUNTAS - Object.keys(errors).length
+  const respondidas = TOTAL_PERGUNTAS - ERROS_PERGUNTAS.filter((campo) => errors[campo]).length
   const rodape = `${respondidas} ${respondidas === 1 ? 'resposta preenchida' : 'respostas preenchidas'} · ${
     analise ? `última análise em ${formatDataHora(analise.em)}` : 'nenhuma análise ainda'
   }`
@@ -177,6 +193,8 @@ export default function Simulacao() {
         onChange={atualizarForm}
         errors={errosVisiveis}
         opcoes={opcoes}
+        criterios={criterios}
+        sugeridos={sugeridos}
         onSubmit={atualizarRecomendacao}
         loading={analisando}
         rodape={rodape}

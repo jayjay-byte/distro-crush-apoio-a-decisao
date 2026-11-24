@@ -57,6 +57,10 @@ Arquivo de dados: `ficha_distros_atualizada.xlsx` (abas `criterios_decisao`, `pe
 
 Botões: **Atualizar recomendação** (análise what-if, antes de salvar) e **Salvar**.
 
+Além das perguntas, o usuário pode definir a **importância de cada um dos 6 critérios ponderados** (nota inteira de 0 a 10). Os valores sugeridos vêm do ROC (seção 4.3). RAM, armazenamento, arquitetura e ambiente não recebem peso: são só triagem.
+
+Campo de peso vazio: enquanto houver algum campo de peso vazio, **Atualizar recomendação** e **Salvar** ficam bloqueados (mensagem "Informe uma nota de 0 a 10."). Ao sair de um campo vazio, ele volta ao **último valor válido daquele campo** (a nota digitada antes ou, se não houve, a sugerida), e não ao valor sugerido.
+
 ---
 
 ## 4. Modelo de decisão (duas fases)
@@ -90,19 +94,34 @@ IA = Σ (peso_i × nota_i) / Σ (pesos dos critérios respondidos)      (0 a 1 �
 - Critério respondido com "Sem preferência" ou deixado em branco: sai do numerador e do denominador, e os demais pesos são redistribuídos.
 - O IA **não** é probabilidade de sucesso.
 
-### 4.3 Pesos (ROC, Barron & Barrett 1996)
+### 4.3 Pesos: pontuação direta normalizada (SMART, Edwards 1977), com ROC como sugestão padrão
 
-A ordem de importância segue a Figura 2-1 do livro. Fórmula: `w_k = (1/n) × Σ_{i=k..n} 1/i`, com n = 6.
+**Pesos do usuário.** O usuário dá a cada critério ponderado uma nota inteira de 0 a 10 (pontuação direta, SMART). O peso é a nota normalizada:
 
-| Ordem | Critério | Peso ROC | Pesos iguais (sensibilidade) |
-|---|---|---|---|
-| 1 | Propósito | 0,408 | 0,167 |
-| 2 | Usabilidade | 0,242 | 0,167 |
-| 3 | Suporte | 0,158 | 0,167 |
-| 4 | Estabilidade | 0,103 | 0,167 |
-| 5 | Init | 0,061 | 0,167 |
-| 6 | Ambiente gráfico | 0,028 | 0,167 |
-| | **Soma** | **1,000** | **1,000** |
+```
+peso_k = nota_k / Σ notas (dos 6 critérios)
+```
+
+- As 6 notas são obrigatórias quando o usuário define pesos.
+- A fórmula do IA (seção 4.2) não muda: critério não respondido continua fora do numerador e do denominador.
+- Se a soma dos pesos dos critérios **respondidos** for 0, a simulação é recusada: *"Defina ao menos um peso maior que zero"*.
+- Peso 0 num critério significa que ele não importa para o usuário; ele continua aparecendo no Detalhamento, com contribuição 0.
+
+**Sem pesos definidos (padrão):** o sistema usa os pesos ROC exatos (Barron & Barrett, 1996), sem nenhuma mudança de comportamento. A ordem de importância segue a Figura 2-1 do livro. Fórmula: `w_k = (1/n) × Σ_{i=k..n} 1/i`, com n = 6.
+
+**Pesos sugeridos (escala de 0 a 10):** o ROC é convertido para a escala do usuário por `round(10 × w_k / w_1)`, e esses valores aparecem como sugestão inicial.
+
+| Ordem | Critério | Peso ROC | Sugerido (0 a 10) | Pesos iguais (sensibilidade) |
+|---|---|---|---|---|
+| 1 | Propósito | 0,408 | 10 | 0,167 |
+| 2 | Usabilidade | 0,242 | 6 | 0,167 |
+| 3 | Suporte | 0,158 | 4 | 0,167 |
+| 4 | Estabilidade | 0,103 | 3 | 0,167 |
+| 5 | Init | 0,061 | 1 | 0,167 |
+| 6 | Ambiente gráfico | 0,028 | 1 | 0,167 |
+| | **Soma** | **1,000** | **25** | **1,000** |
+
+Os pesos sugeridos normalizados (10/25, 6/25…) ficam próximos do ROC, mas não são iguais a ele. Por isso, sem pesos definidos, o sistema usa o ROC exato, e não os sugeridos.
 
 ### 4.4 Regras de nota (0 a 1)
 
@@ -136,6 +155,27 @@ A ordem de importância segue a Figura 2-1 do livro. Fórmula: `w_k = (1/n) × �
   3. distro analisada no livro (`no_livro = sim`);
   4. menor `ram_min_gb`;
   5. ordem alfabética do nome (último recurso, só quando os 4 critérios empatam).
+
+### 4.7 Contrato do motor (entrada e saída)
+
+**Entrada (respostas):** `tarefa`, `ambiente`, `ram_gb`, `disco_gb`, `arquitetura`, `nivel`, `ajuda`, `atualizacoes`, `init`, `desktop` e o campo opcional `pesos`:
+
+```json
+"pesos": {"proposito": 10, "usabilidade": 6, "suporte": 4, "estabilidade": 3, "init": 1, "ambiente_grafico": 1}
+```
+
+- `pesos` ausente ou `null`: pesos ROC.
+- Presente: as 6 chaves são obrigatórias, cada uma com inteiro de 0 a 10. Nota fora da faixa, não inteira, chave faltando ou chave desconhecida: erro de validação (422).
+- Soma dos pesos dos critérios respondidos igual a 0: erro 422, *"Defina ao menos um peso maior que zero"*.
+- No what-if, `pesos` não pode ser enviado junto com a opção de pesos iguais da sensibilidade (422).
+
+**Saída (resultado):** além dos campos de antes (`compativeis`, `peso_respondido`, `destaques`, `grupos`, `tambem_compativeis`, `avisos`), traz `pesos_origem`:
+
+- `"roc"`: sem pesos do usuário;
+- `"usuario"`: com os pesos do usuário;
+- `"iguais"`: só no what-if com pesos iguais (sensibilidade).
+
+As contribuições de cada distro mostram o peso **efetivamente usado** (já normalizado). Snapshots salvos antes desta regra não têm `pesos_origem` e são lidos como `"roc"`.
 
 ---
 
@@ -213,7 +253,7 @@ Texto de apoio: *"Quanto a distro atende às suas respostas, não é chance de s
 | **Módulo de simulação** | Formulário (seção 3) + botões "Atualizar recomendação" e "Salvar" |
 | **Resultado** | Destaque fora dos grupos (se houver) → grupos nomeados com IA do grupo → distros com IA → Também compatíveis (se houver) → avisos |
 | **Detalhamento da distro** | IA exato, grupo, tabela peso × nota × contribuição (6 critérios), "onde perdeu pontos" em linguagem simples, informações técnicas (pacotes, init, modelo) |
-| **Relatórios** | Histórico/comparação de simulações com grupos nomeados e IA, análise de sensibilidade (ROC × pesos iguais) e "Como interpretar este resultado" |
+| **Relatórios** | Histórico/comparação de simulações com grupos nomeados e IA, análise de sensibilidade (seus pesos × ROC ou ROC × pesos iguais) e "Como interpretar este resultado" |
 
 **Resultado e Detalhamento no protótipo:** os dois são seções da tela de Simulação, como no Figma, e não telas com rota própria.
 
@@ -258,7 +298,17 @@ Regras de exibição:
 ### 7.1 Dados das telas (API do piloto)
 
 - **Acesso:** login simples com usuário e senha (hash bcrypt) e token com validade de 8 horas. Cada usuário vê **só as próprias simulações**; a simulação de outro usuário é tratada como inexistente. Usuários de demonstração: `demo` e `demo2`.
-- **Atualizar recomendação** (what-if) calcula sem salvar e não entra em nenhuma contagem. **Salvar** grava as respostas e o resultado completo (snapshot), para que o Relatório e o Detalhamento de simulações antigas não sejam recalculados.
+- **Atualizar recomendação** (what-if) calcula sem salvar e não entra em nenhuma contagem. **Salvar** grava as respostas, os pesos do usuário (se houver) e o resultado completo (snapshot), para que o Relatório e o Detalhamento de simulações antigas não sejam recalculados.
+- **Tabelas das simulações:**
+
+  | Tabela | Coluna | Conteúdo |
+  |---|---|---|
+  | `simulacoes` | `respostas` (JSON) | as 10 respostas, sem os pesos |
+  | `simulacoes` | `pesos` (JSON, pode ser nulo) | as 6 notas de 0 a 10; nulo = pesos ROC |
+  | `simulacoes` | `criado_em` | data em UTC |
+  | `resultados` | `dados` (JSON) | snapshot do resultado, com `pesos_origem` |
+
+  A simulação devolvida pela API traz os pesos dentro das respostas (`respostas.pesos`), no mesmo formato da entrada.
 - **Perfil resumido** de uma simulação: "Nível · Propósito · Ambiente", ex.: "Iniciante · Uso geral · Desktop".
 - **Distro de maior IA** de uma simulação: a 1ª colocada geral do ranking, esteja ela num grupo, nos destaques ou em "também compatíveis".
 - **Dashboard** (sumarização, só simulações do usuário logado; os filtros ficam só no visual):
@@ -275,10 +325,14 @@ Regras de exibição:
   - o comparativo do IA por grupo;
   - a sensibilidade;
   - "Como interpretar este resultado".
-- **Sensibilidade:** o ranking ROC × pesos iguais é recalculado com as respostas salvas e a base atual, nos dois lados, para comparar nas mesmas condições. Na tela:
+- **Sensibilidade:** compara o ranking de grupos com dois conjuntos de pesos, ambos recalculados com as respostas salvas e a base atual, para comparar nas mesmas condições:
+  - simulação **com pesos do usuário**: "Seus pesos" (principal) × "Pesos ROC" (alternativo), comparação `usuario_roc`;
+  - simulação **sem pesos**: "Pesos ROC" (principal) × "Pesos iguais" (alternativo), comparação `roc_iguais`, como antes.
+
+  A API informa a comparação feita (`comparacao`), os dois lados (`principal` e `alternativo`, cada um com `chave`, `rotulo` e `ranking`) e se o 1º grupo é o mesmo nos dois (`mesmo_primeiro_grupo`). Os campos anteriores `roc` e `iguais` continuam sempre preenchidos. Na tela:
   - aviso no topo dizendo se o 1º grupo se manteve ou mudou;
   - os dois rankings lado a lado (empilhados no celular), com posição, nome, nº de distros, IA e rótulo, e o 1º de cada lado em destaque;
-  - no lado de pesos iguais, quanto cada grupo subiu ou desceu em relação ao ROC.
+  - no lado alternativo, quanto cada grupo subiu ou desceu em relação ao principal.
 - **Como interpretar este resultado:** três textos-modelo, preenchidos com os dados da simulação, sem explicar "por que" um grupo foi favorecido:
   1. **Perfil e facilidade:** com destaque fora dos grupos, cita primeiro a distro em destaque e o IA dela e depois o 1º grupo (mesma regra do título do resultado): "Destaque para o seu perfil: <distro>, com IA de 93% (Muito alta), fora dos grupos. O grupo mais aderente é <grupo>, com IA de 87% (Alta)." Sem destaque: "O 1º grupo é <grupo>, com IA de 92% (Muito alta)." Nos dois casos, termina com "A usabilidade foi avaliada para o nível <nível>.";
   2. **Hardware e preferências:** "<RAM> GB de RAM, <disco> GB de armazenamento, <arquitetura> e ambiente <ambiente> deixaram N distros compatíveis na triagem. As preferências (ajuda, atualizações, init e ambiente gráfico) só alteram o IA." (com tarefa: "A tarefa <tarefa> também filtra as distros de propósito específico.");
@@ -317,7 +371,7 @@ Exemplo da tela (P1). Respostas: uso geral, desktop, fórum, iniciante, 8 GB, 12
 | Sumarização | Contagem/frequência por categoria; média (IA do grupo); resumo das simulações |
 | Agrupamento | Distância de Gower (Jaccard, amplitude); hierárquico aglomerativo com ligação média; silhueta; validação com K-Medoids (PAM) e índice de Rand ajustado |
 | Classificação | Por regras: compatível/incompatível (triagem); faixas do IA; escala ordinal de amigabilidade; isolada/em grupo |
-| Modelo de decisão | Soma ponderada (SAW); normalização 0–1; pesos ROC; ranking com desempate lexicográfico; análise what-if; análise de sensibilidade (pesos iguais); validação por personas |
+| Modelo de decisão | Soma ponderada (SAW); normalização 0–1; pesos do usuário por pontuação direta normalizada (SMART), com pesos ROC como sugestão e padrão; ranking com desempate lexicográfico; análise what-if; análise de sensibilidade (seus pesos × ROC ou ROC × pesos iguais); validação por personas |
 
 Software: Python 3 (SciPy, scikit-learn, NumPy, openpyxl, matplotlib).
 
@@ -327,6 +381,7 @@ Software: Python 3 (SciPy, scikit-learn, NumPy, openpyxl, matplotlib).
 
 - BARRON, F. H.; BARRETT, B. E. Decision quality using ranked attribute weights. *Management Science*, v. 42, n. 11, p. 1515-1523, 1996.
 - CASTRO, J. D. *Introducing Linux Distros*. Apress, 2016.
+- EDWARDS, W. How to use multiattribute utility measurement for social decisionmaking. *IEEE Transactions on Systems, Man, and Cybernetics*, v. 7, n. 5, p. 326-340, 1977.
 - EDWARDS, W.; BARRON, F. H. SMARTS and SMARTER. *Organizational Behavior and Human Decision Processes*, v. 60, n. 3, p. 306-325, 1994.
 - GOWER, J. C. A general coefficient of similarity and some of its properties. *Biometrics*, v. 27, n. 4, p. 857-871, 1971.
 - HUANG, Z. Extensions to the k-means algorithm for clustering large data sets with categorical values. *Data Mining and Knowledge Discovery*, v. 2, p. 283-304, 1998.
