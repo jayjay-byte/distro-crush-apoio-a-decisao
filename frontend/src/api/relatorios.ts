@@ -16,7 +16,7 @@ export function getSimulacao(id: number): Promise<SimulacaoDetalhe> {
   return apiFetch<SimulacaoDetalhe>(`/simulacoes/${id}`)
 }
 
-/** GET /simulacoes/{id}/sensibilidade: ranking de grupos com ROC e com pesos iguais (recalculados). */
+/** GET /simulacoes/{id}/sensibilidade: seus pesos × ROC ou ROC × pesos iguais (recalculados). */
 export function getSensibilidade(id: number): Promise<SensibilidadeOut> {
   return apiFetch<SensibilidadeOut>(`/simulacoes/${id}/sensibilidade`)
 }

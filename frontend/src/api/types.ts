@@ -39,9 +39,26 @@ export type Respostas = {
   atualizacoes: Atualizacoes | null
   init: string | null
   desktop: string | null
+  /** Notas de 0 a 10 dos 6 critérios; ausente ou `null` = pesos ROC. */
+  pesos?: PesosUsuario | null
 }
 
 export type CriterioId = 'proposito' | 'usabilidade' | 'suporte' | 'estabilidade' | 'init' | 'ambiente_grafico'
+
+/** Importância de cada critério, inteiro de 0 a 10 (as 6 chaves são obrigatórias). */
+export type PesosUsuario = Record<CriterioId, number>
+
+/** Pesos usados no resultado. Snapshot antigo sem o campo = "roc". */
+export type PesosOrigem = 'roc' | 'usuario' | 'iguais'
+
+/** GET /criterios: peso ROC exato e peso sugerido na escala de 0 a 10. */
+export type CriterioOut = {
+  id: CriterioId
+  nome: string
+  ordem: number
+  peso: number
+  peso_sugerido: number
+}
 
 export type Rotulo = 'Muito alta' | 'Alta' | 'Média' | 'Baixa'
 
@@ -76,6 +93,7 @@ export type GrupoResultado = {
 export type Resultado = {
   compativeis: number
   peso_respondido: number
+  pesos_origem?: PesosOrigem
   destaques: DistroResultado[]
   grupos: GrupoResultado[]
   tambem_compativeis: DistroResultado[]
@@ -176,11 +194,25 @@ export type RankingGrupos = {
   grupos: GrupoRanking[]
 }
 
+export type LadoSensibilidade = {
+  chave: PesosOrigem
+  /** "Seus pesos", "Pesos ROC" ou "Pesos iguais". */
+  rotulo: string
+  ranking: RankingGrupos
+}
+
 export type SensibilidadeOut = {
   simulacao_id: number
+  /** Com pesos do usuário: seus pesos × ROC; sem pesos: ROC × pesos iguais. */
+  comparacao: 'roc_iguais' | 'usuario_roc'
+  /** O peso usado no resultado. */
+  principal: LadoSensibilidade
+  /** O peso de comparação. */
+  alternativo: LadoSensibilidade
+  /** Compara principal × alternativo. */
+  mesmo_primeiro_grupo: boolean
   roc: RankingGrupos
   iguais: RankingGrupos
-  mesmo_primeiro_grupo: boolean
 }
 
 export type DistroContagem = {
