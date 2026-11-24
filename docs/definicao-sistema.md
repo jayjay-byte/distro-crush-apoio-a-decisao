@@ -59,6 +59,8 @@ Botões: **Atualizar recomendação** (análise what-if, antes de salvar) e **Sa
 
 Além das perguntas, o usuário pode definir a **importância de cada um dos 6 critérios ponderados** (nota inteira de 0 a 10). Os valores sugeridos vêm do ROC (seção 4.3). RAM, armazenamento, arquitetura e ambiente não recebem peso: são só triagem.
 
+Campo de peso vazio: enquanto houver algum campo de peso vazio, **Atualizar recomendação** e **Salvar** ficam bloqueados (mensagem "Informe uma nota de 0 a 10."). Ao sair de um campo vazio, ele volta ao **último valor válido daquele campo** (a nota digitada antes ou, se não houve, a sugerida), e não ao valor sugerido.
+
 ---
 
 ## 4. Modelo de decisão (duas fases)
